@@ -1698,6 +1698,7 @@ function render(){
   const brand=document.querySelector('#brandHead'); if(brand) brand.classList.toggle('hide', state.view!=='live');
   const topbar=document.querySelector('#topbar'); if(topbar){ topbar.classList.toggle('hide', hideChrome); topbar.classList.toggle('nobrand', state.view!=='live'&&!hideChrome); }
   const bn=document.querySelector('#banner'); if(bn) bn.style.display=(state.view==='live')?'':'none';
+  if(state.view!=='live' && liveTimer){ clearInterval(liveTimer); liveTimer=null; }  // never leave a live-analysis timer running off-view
   animate(v);
 }
 
@@ -3303,6 +3304,8 @@ function wireLive(){ /* analysis runs from the global "Live MAVIS Analysis" butt
 // switch to the live view and run the analysis for the active task
 function runAnalysisNow(){
   const wasLive=(state.view==='live');
+  if(liveTimer){ clearInterval(liveTimer); liveTimer=null; }  // never let a prior run block this one
+  shownId=null;
   state.view='live'; renderNav(); render(); window.scrollTo(0,0);
   setTimeout(runLive, wasLive?70:300);
 }
@@ -3337,7 +3340,8 @@ function revealStage2(){
   }, items.length*150+120);
 }
 function runLive(){
-  if(liveTimer || state.view!=='live') return;
+  if(state.view!=='live') return;
+  if(liveTimer){ clearInterval(liveTimer); liveTimer=null; }  // clear any stale timer instead of bailing (fixes Run doing nothing after an interrupted analysis)
   const w=currentWF(); recordRecent(w);
   shownId=null;
   const rh=document.querySelector('.livehint'); if(rh) rh.remove();
