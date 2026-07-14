@@ -747,19 +747,22 @@ function viewCSA(){
     accItem('Reviewing, delivering &amp; iterating',`<ul><li><b>Review before send</b> &mdash; MAVIS drafts; you approve. Spot-check numbers and client-facing copy.</li><li>Anything leaving the workspace (emails, posts, shared files) must be intentional and privacy-safe.</li><li>Deliverables land in the review queue &mdash; approve, request changes, or ask MAVIS to iterate (&ldquo;tighten the intro,&rdquo; &ldquo;use last quarter&rsquo;s numbers&rdquo;).</li><li>Save the winning prompt for recurring work so the next run is one click.</li></ul>`),
     accItem('What MAVIS can &amp; can&rsquo;t do',`<div class="csa-two"><div><div class="csa-h ok">MAVIS can</div><ul><li>Draft, extract, research, summarize, and build reports/decks/sheets.</li><li>Automate across ${apps} connected apps (with an authorized connection).</li><li>Read public web pages and the documents you provide.</li></ul></div><div><div class="csa-h no">MAVIS needs a human for</div><ul><li>Final approval before sending client-facing messages.</li><li>Access it hasn&rsquo;t been granted (locked pages, un-connected accounts).</li><li>Judgment calls on sensitive or ambiguous decisions.</li></ul></div></div><p class="csa-tip">Integration acting up? See the <b>CSA Tech Manager</b> for health checks, fixes, and escalation.</p>`),
   ].join('');
+  const chips=['Onboard a new client','Automate invoicing','Send a weekly client report','HubSpot','Reduce manual data entry','Client email follow-ups'].map(c=>`<button class="prosChip" data-q="${esc(c)}">${esc(c)}</button>`).join('');
   return `<section class="card">
-    ${sectionHero('&#9672;','CSA (Client Systems Architect)','For <b>Client Systems Architects</b> &mdash; look up any client task, tool, or keyword for a workflow idea &amp; the tools needed, plus the full guide to using MAVIS.',[[(DATA.deliverables||[]).length,'Capabilities'],[apps,'Connected apps'],['Lookup','+ full guide']])}
-    <div class="csaLookup"><div class="ecoSubh" style="margin-top:0">&#128269; Client task lookup</div>
-      <p class="wizsub" style="margin:0 0 10px">Enter a <b>tool</b>, <b>keyword</b>, or the <b>task a client gave you</b> &mdash; MAVIS returns the workflow idea, the tools needed, and a full delivery plan.</p>
-      <input id="csaSearch" class="ecoSearch" placeholder="e.g. HubSpot, invoicing, send weekly report, onboard new client, scrape leads..." autocomplete="off">
+    ${sectionHero('&#9672;','CSA &mdash; AI Client Task Discovery &amp; Delivery Planner','Describe a client request &mdash; a task, tool, keyword, or plain language &mdash; and MAVIS acts as your senior Client Systems Architect: it maps the request to the right workflow, capabilities, tools, prompts, and a full delivery plan.',[[(DATA.deliverables||[]).length,'Capabilities'],[apps,'Connected apps'],['Semantic','Discovery']])}
+    <div class="csaLookup"><div class="ecoSubh" style="margin-top:0">&#128269; Client Task Discovery</div>
+      <p class="wizsub" style="margin:0 0 9px">Enter the <b>task a client gave you</b>, a <b>tool</b>, or a <b>keyword</b> &mdash; even plain language like &ldquo;they spend too long on invoicing.&rdquo; MAVIS returns the recommended workflow, required capabilities &amp; tools, automation opportunities, ready-to-use prompts, and a client-handoff checklist.</p>
+      <input id="csaSearch" class="ecoSearch" placeholder="e.g. onboard a new client, invoice sync to QuickBooks, weekly report, HubSpot, follow-up emails..." autocomplete="off">
+      <div class="prosChips" id="csaChips">${chips}</div>
       <div id="csaResults"></div></div>
-    <div class="ecoSubh">CSA guide</div>
-    <div class="qsteps">${steps}</div>
-    <div class="accList">${items}</div></section>`;
+    <details class="csaPlaybook"><summary>&#128218; CSA playbook &amp; reference &mdash; how to scope, prompt &amp; deliver</summary>
+      <div class="qsteps">${steps}</div>
+      <div class="accList">${items}</div></details></section>`;
 }
 function wireCSA(){
   const q=$('#csaSearch'); csaState={q:'',sel:null,recipes:[]};
   if(q){ q.addEventListener('input',()=>{ csaState.sel=null; csaState.recipes=null; renderCSAResults(q.value); }); }
+  document.querySelectorAll('#csaChips .prosChip').forEach(b=>b.onclick=()=>{ if(q){ q.value=b.dataset.q; } csaState.sel=null; csaState.recipes=null; renderCSAResults(b.dataset.q); const r=$('#csaResults'); if(r) r.scrollIntoView({behavior:'smooth',block:'nearest'}); });
   renderCSAResults('');
   document.querySelectorAll('#view .acc-h').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('open'));
   bindCopy();
@@ -780,16 +783,87 @@ function renderCSAResults(q){
   const recs=csaState.recipes;
   if(csaState.sel!=null && recs[csaState.sel]){
     const r=recs[csaState.sel];
-    box.innerHTML=`<div class="wizrow" style="margin:12px 0"><button class="wizghost" id="csaBack2">&larr; Back to results</button><button class="runbtn hero" id="csaRun2">&#10022; Run Live Analysis</button></div>${recipeDetail(r)}`;
+    box.innerHTML=`<div class="wizrow" style="margin:12px 0"><button class="wizghost" id="csaBack2">&larr; Back to results</button><button class="runbtn hero" id="csaRun2">&#10022; Run Live Analysis</button></div>${csaPlanner(r,query)}`;
     $('#csaBack2').onclick=()=>{ csaState.sel=null; renderCSAResults(csaState.q); window.scrollTo({top:220,behavior:'smooth'}); };
     $('#csaRun2').onclick=()=>selectAnalysis(r.wfId);
+    box.querySelectorAll('[data-rel-open]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.relOpen; if(recs[i]){ csaState.sel=i; renderCSAResults(csaState.q); window.scrollTo({top:220,behavior:'smooth'}); } });
     bindCopy(); return;
   }
-  if(!recs.length){ box.innerHTML=`<div class="csaResHint">No automations found for &ldquo;${esc(query)}&rdquo;. Try a tool (<b>QuickBooks</b>), a task (<b>build a sales dashboard</b>), or a process (<b>invoicing</b>, <b>onboarding</b>, <b>lead generation</b>).</div>`; return; }
-  box.innerHTML=`<div class="csaResHint"><b>${recs.length}</b> automation${recs.length===1?'':'s'} MAVIS can build for &ldquo;${esc(query)}&rdquo; &mdash; click one for the full implementation guide.</div>
+  if(!recs.length){ box.innerHTML=`<div class="csaResHint">No matches for &ldquo;${esc(query)}&rdquo; yet. Try a tool (<b>QuickBooks</b>), a task (<b>build a sales dashboard</b>), a process (<b>invoicing</b>, <b>onboarding</b>), or plain language (<b>they spend too long on email</b>).</div>`; return; }
+  const top=recs[0]; const mxAgg=recs.slice(0,6).map(recipeMetrics);
+  const avgHrs=Math.round(mxAgg.reduce((a,m)=>a+m.timeSaved,0)/mxAgg.length);
+  box.innerHTML=`<div class="csaDisc"><div class="csaDiscHd"><div class="discHeroIc">&#9672;</div><div><div class="csaDiscT">Client Task Discovery &mdash; &ldquo;${esc(query)}&rdquo;</div><div class="csaDiscS">As your senior Client Systems Architect, I mapped this to <b>${recs.length}</b> ready-to-build workflow${recs.length===1?'':'s'}. Strongest fit: <b>${esc(top.title)}</b>. Open any option for a full delivery plan &mdash; workflow, capabilities, tools, prompts &amp; a client-handoff checklist.</div></div></div>
+      <div class="csaDiscStats"><div class="csaDiscStat"><b>${recs.length}</b><span>Workflow options</span></div><div class="csaDiscStat"><b>~${avgHrs} hrs/wk</b><span>Typical time saved</span></div><div class="csaDiscStat"><b>${esc(recipeMetrics(top).complexity)}</b><span>Top-fit complexity</span></div></div></div>
     <div class="csaResGrid">${recs.map((r,idx)=>recipeCard(r,idx)).join('')}</div>`;
   box.querySelectorAll('.recipeOpen').forEach(b=>b.onclick=()=>{ csaState.sel=+b.dataset.i; renderCSAResults(csaState.q); window.scrollTo({top:220,behavior:'smooth'}); });
   box.querySelectorAll('.recipeRun').forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); selectAnalysis(b.dataset.wf); });
+}
+// Required MAVIS capabilities (primary + semantically-related), each with a "why"
+function csaCaps(r,query){
+  const primary=DATA.workflows.find(w=>w.id===r.wfId)||DATA.workflows[0];
+  const out=[{name:primary.name, why:sentence(primary.autoRec||primary.autoType||'delivers this outcome end to end')}];
+  const more=(typeof mavisSearch==='function')?mavisSearch(query,14).filter(x=>x.kind==='capability'&&x.wfId!==primary.id):[];
+  const seen=new Set([primary.id]);
+  for(const m of more){ if(out.length>=3) break; if(seen.has(m.wfId)) continue; seen.add(m.wfId); const w=m.w||DATA.workflows.find(x=>x.id===m.wfId); if(w) out.push({name:w.name, why:'Supports the task &mdash; '+((w.autoRec||w.autoType||'').toLowerCase())}); }
+  return out;
+}
+function csaChecklist(r){
+  const two=r.kind==='integration'&&r.tools.length>=2;
+  return [
+    'Client outcome &amp; success criteria confirmed in writing',
+    two?`Accounts connected &amp; authorized: <b>${esc(r.tools.slice(0,2).join(', '))}</b>`:'Required accounts connected &amp; authorized (correct scopes)',
+    'Inputs / field mapping validated on a test record',
+    'First run reviewed for accuracy &amp; on-brand output',
+    'Client sign-off on format &amp; cadence',
+    two?'Trigger / schedule configured &amp; monitoring on':'Schedule or trigger configured (if recurring)',
+    'Winning prompt saved for repeatable runs',
+    'Handoff note delivered to the client / account owner',
+  ];
+}
+function csaPlanner(r,query){
+  const mx=recipeMetrics(r); const two=r.kind==='integration'&&r.tools.length>=2;
+  const A=r.tools[0]||'the source tool', B=r.tools[1]||'the target tool';
+  const w=DATA.workflows.find(x=>x.id===r.wfId)||DATA.workflows[0];
+  const steps=two?[
+    `<b>Trigger</b> &mdash; a new or updated record/event in <b>${esc(A)}</b> (a new order, contact, payment, or row).`,
+    `<b>Capture</b> &mdash; MAVIS reads the event via the ${esc(A)} API / connected account.`,
+    `<b>Transform</b> &mdash; MAVIS validates &amp; maps the fields to <b>${esc(B)}</b>&rsquo;s format.`,
+    `<b>Action</b> &mdash; MAVIS ${esc(r.desc)} in ${esc(B)}.`,
+    `<b>Confirm</b> &mdash; logs the result, retries on errors, and alerts you.`,
+  ]:[
+    `<b>Trigger</b> &mdash; the CSA requests it, or it runs on a schedule.`,
+    `<b>Gather</b> &mdash; MAVIS pulls inputs from the connected tools / documents.`,
+    `<b>Process</b> &mdash; MAVIS ${esc(r.desc)}.`,
+    `<b>Deliver</b> &mdash; produces the output and files it for review.`,
+    `<b>Confirm</b> &mdash; you approve; MAVIS finalizes, logs, and (if recurring) schedules it.`,
+  ];
+  const caps=csaCaps(r,query);
+  const capsHtml=caps.map(c=>`<li><b>${esc(c.name)}</b> &mdash; ${c.why}</li>`).join('');
+  const toolsList=(r.tools.length?r.tools:(w.integrations&&w.integrations.length?w.integrations:['Claude','Pipedream']));
+  const toolsChips=toolsList.map(t=>`<span class="ecoSkill">${esc(t)}</span>`).join('');
+  const buildPrompt=two
+    ? `Build this automation: when a new/updated record appears in ${A}, ${stripTags(r.desc)} in ${B}.\nConnect ${A} and ${B}, map the key fields, run a test on one record, and report the result before going live.`
+    : `Set up this automation: ${stripTags(r.desc)}.\nUse the connected tools, run a test on a small sample, and show me the result for approval before going live.`;
+  const scopePrompt=`Help me scope this client task: "${stripTags(query||r.title)}".\nPropose the outcome, required inputs, systems, approvals, and success criteria, then outline the build steps.`;
+  const checklist=csaChecklist(r).map(i=>`<li><span class="csaCheck">&#9744;</span> ${i}</li>`).join('');
+  // related (semantic) — other recipes for this query + tool-based
+  const rel=(csaState.recipes||[]).filter(x=>x!==r).slice(0,4);
+  const relHtml=rel.length?`<div class="csaRelList">${rel.map(x=>{ const i=(csaState.recipes||[]).indexOf(x); return `<button class="csaRelItem" data-rel-open="${i}"><span class="csaRelName">${esc(x.title)}</span><span class="csaRelArrow">&rarr;</span></button>`; }).join('')}</div>`:`<p>Explore the Integration Library for more automations with these tools.</p>`;
+  const impact=`${money(w.annualCost)}/yr &middot; ${w.annualHours.toLocaleString()} hrs/yr`;
+  const blocks=[
+    ['&#128221; Task summary',`<p>The client wants to <b>${esc(query||r.title)}</b>. In practice that means: ${esc(sentence(r.desc))}${two?` &mdash; an automated bridge between <b>${esc(A)}</b> and <b>${esc(B)}</b>.`:'.'}</p>`],
+    ['&#128736; Recommended workflow (trigger &rarr; delivery)',`<ol>${steps.map(s=>`<li>${s}</li>`).join('')}</ol>`],
+    ['&#9672; Required MAVIS capabilities &amp; why',`<ul>${capsHtml}</ul>`],
+    ['&#128295; Required tools &amp; integrations',`<div class="tchips" style="margin:2px 0 8px">${toolsChips}</div><p>Orchestrated by MAVIS via connected accounts (API / Pipedream). ${two?`<b>${esc(A)}</b> is read; <b>${esc(B)}</b> is written.`:''}</p>`],
+    ['&#9889; Automation opportunities',`<ul><li>Eliminate the manual copy/paste between ${two?`${esc(A)} and ${esc(B)}`:'systems'}.</li><li>Run in real time on every event, or batched on a schedule.</li><li>Add validation &amp; alerting so nothing slips through.</li><li>Free the CSA / client team to focus on judgment work.</li></ul>`],
+    ['&#10022; Suggested AI prompts (ready to use)',promptBox(buildPrompt)+promptBox(scopePrompt)],
+    ['&#9989; Deliverables checklist (client handoff)',`<ul class="csaChecklist">${checklist}</ul>`],
+    ['&#128200; Build time, complexity &amp; impact',`<div class="delivstats"><div><b>${esc(mx.effort.replace('setup','').trim())}</b><span>Automation setup</span></div><div><b>${esc(w.implTime||'1-2 weeks')}</b><span>Full build</span></div><div><b>${esc(mx.complexity)}</b><span>Complexity</span></div><div><b>${esc(impact)}</b><span>Est. business impact</span></div></div>`],
+    ['&#128279; Related recommendations',relHtml],
+  ];
+  return `<div class="wizpanel"><div class="recipeTop"><div class="wizh" style="margin:0">${esc(r.title)}</div><span class="recipeCx cx-${mx.complexity.toLowerCase()}">${mx.complexity}</span></div>
+    <p class="wizsub">${two?`Automation between <b>${esc(A)}</b> and <b>${esc(B)}</b>`:`MAVIS capability`} &middot; ${esc(r.cat)} &middot; delivery plan for the CSA</p>
+    <div class="delivgrid">${blocks.map(b=>`<div class="delivblock"><div class="delivh">${b[0]}</div><div class="delivb">${b[1]}</div></div>`).join('')}</div></div>`;
 }
 function recipeCard(r,idx){
   const mx=recipeMetrics(r);
