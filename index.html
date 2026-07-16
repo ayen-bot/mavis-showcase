@@ -1519,6 +1519,46 @@ const VIEWS = [
 const state = { view:'live', scope:'all', activeId:null, autoReveal:false };
 const recent = [];
 
+// ---------- page titles + hash routing (each view / CSA tab = an addressable page) ----------
+const PAGE_TITLES = {
+  live:'Live MAVIS Analysis', sim:'MAVIS Simulator', deliverables:'What MAVIS Can Do',
+  tools:'Tools', csa:'CSA', prospecting:'Prospecting & Lead Gen', va:'VA Toolkit',
+  csatech:'CSA Tech Manager', apibanks:'API Banks', catalog:'Integration Library',
+  discover:'Search', overview:'Overview', workflows:'Workflows', opportunities:'Opportunities',
+  impact:'Impact', roadmap:'Roadmap',
+};
+const CSA_TAB_TITLES = { discovery:'Client Task Discovery', playbook:'CSA Playbook', industry:'Industry Consultant', comms:'Communication Academy', prompt:'Prompt & Tokens' };
+const CSA_TABS_ORDER = ['discovery','playbook','industry','comms','prompt'];
+let pendingCsaTab = null;
+function currentCsaTab(){ return (typeof csaState!=='undefined' && csaState && csaState.tab) || 'discovery'; }
+function titleString(){
+  if(state.view==='csa') return (CSA_TAB_TITLES[currentCsaTab()]||'CSA') + ' · CSA · MAVIS';
+  const p = PAGE_TITLES[state.view];
+  return p ? (p + ' · MAVIS') : 'MAVIS — My Advanced Virtual Intelligence System';
+}
+function hashFor(){ return state.view==='csa' ? '#csa/'+currentCsaTab() : '#'+state.view; }
+function applyPageMeta(){
+  try{ document.title = titleString(); }catch(_){}
+  try{ const h=hashFor(); if(location.hash!==h) history.replaceState(null,'',h); }catch(_){}
+}
+function routeFromHash(){
+  const raw=(location.hash||'').replace(/^#/,'').trim(); if(!raw) return false;
+  const parts=raw.split('/'); const v=parts[0];
+  const known=VIEWS.map(x=>x[0]).concat(['catalog','discover','overview','workflows','opportunities','impact','roadmap']);
+  if(known.indexOf(v)<0) return false;
+  if(v==='csa') pendingCsaTab=(parts[1]&&CSA_TABS_ORDER.indexOf(parts[1])>=0)?parts[1]:null;
+  state.view=v; return true;
+}
+function activateCsaTab(tab){
+  if(CSA_TABS_ORDER.indexOf(tab)<0) tab='discovery';
+  csaState.tab=tab;
+  const panels={discovery:'#csaDiscoveryPanel',playbook:'#csaPlaybookPanel',industry:'#csaIndustryPanel',comms:'#csaCommsPanel',prompt:'#csaPromptPanel'};
+  document.querySelectorAll('.csaTab').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
+  Object.entries(panels).forEach(([k,sel])=>{ const el=$(sel); if(el) el.style.display=(k===tab)?'':'none'; });
+  if(tab==='playbook' && !csaState.pbBooted){ csaState.pbBooted=true; techWiz.pbCat='tool'; techWiz.pbToolSel=null; techWiz.pbSel=null; techWiz.pbQ=''; renderPlaybookHub($('#csaPlaybookStage')); }
+  applyPageMeta();
+}
+
 // ---------- nav (sidebar) ----------
 function renderNav(){
   const nav = $('#nav'); nav.innerHTML='';
@@ -1878,6 +1918,7 @@ function render(){
   const bn=document.querySelector('#banner'); if(bn) bn.style.display=(state.view==='live')?'':'none';
   if(state.view!=='live' && liveTimer){ clearInterval(liveTimer); liveTimer=null; }  // never leave a live-analysis timer running off-view
   animate(v);
+  applyPageMeta();  // set the browser page title + deep-link hash for the current page
 }
 
 const DONUT_COLORS=['#06B6D4','#6366F1','#22D3EE','#818CF8','#10B981','#F59E0B','#14B8A6','#94A3B8'];
@@ -2297,12 +2338,8 @@ function viewCSA(){
 }
 function wireCSA(){
   csaState={q:'',sel:null,recipes:null,tab:'discovery',indQ:'',indSel:null,indFn:null,indRun:null,indRunRel:null,acadMode:'play',playCat:'all',playQ:'',playSel:null,objQ:'',objSel:null,simSel:null,simText:'',simFb:null,pbBooted:false,promptCat:'all',promptQ:'',promptSel:null};
-  const panels={discovery:'#csaDiscoveryPanel',playbook:'#csaPlaybookPanel',industry:'#csaIndustryPanel',comms:'#csaCommsPanel',prompt:'#csaPromptPanel'};
-  // tab toggle (lazy-render playbook on first open)
-  document.querySelectorAll('.csaTab').forEach(t=>t.onclick=()=>{ csaState.tab=t.dataset.tab; document.querySelectorAll('.csaTab').forEach(x=>x.classList.toggle('active',x===t));
-    Object.entries(panels).forEach(([k,sel])=>{ const el=$(sel); if(el) el.style.display=(k===csaState.tab)?'':'none'; });
-    if(csaState.tab==='playbook' && !csaState.pbBooted){ csaState.pbBooted=true; techWiz.pbCat='tool'; techWiz.pbToolSel=null; techWiz.pbSel=null; techWiz.pbQ=''; renderPlaybookHub($('#csaPlaybookStage')); }
-  });
+  // tab toggle (lazy-render playbook on first open); each tab is its own page (title + hash)
+  document.querySelectorAll('.csaTab').forEach(t=>t.onclick=()=>activateCsaTab(t.dataset.tab));
   // discovery
   const q=$('#csaSearch');
   if(q){ q.addEventListener('input',()=>{ csaState.sel=null; csaState.recipes=null; renderCSAResults(q.value); }); }
@@ -2322,6 +2359,8 @@ function wireCSA(){
   renderPrompt();
   document.querySelectorAll('#view .acc-h').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('open'));
   bindCopy();
+  // honor a deep-linked CSA sub-tab (e.g. #csa/industry)
+  if(pendingCsaTab){ const pt=pendingCsaTab; pendingCsaTab=null; activateCsaTab(pt); }
 }
 const PROMPT_CATS=[['all','All',''],['best','Best Practices','✍️'],['template','Prompt Templates','🧩'],['token','Token Optimization','🎟'],['efficiency','Efficiency Tips','⚡'],['mistakes','Common Mistakes','⚠️']];
 function tokenDashboardHTML(){
@@ -4527,7 +4566,10 @@ function resultsHTML(w){
 // ---------- boot ----------
 INDEX=buildIndex();
 buildCapText();
+routeFromHash();  // open the page named in the URL hash (deep-link), if any
 renderNav(); render();
+// keep pages in sync with the URL: manual hash edits, shared links, back/forward
+window.addEventListener('hashchange',()=>{ if(location.hash===hashFor()) return; if(routeFromHash()){ renderNav(); render(); window.scrollTo(0,0); } });
 const liveBtn=$('#liveBtn'); if(liveBtn) liveBtn.onclick=()=>{
   const si=$('#search'); const q=(si?si.value:'').trim().toLowerCase();
   if(q){ const match=DATA.workflows.find(w=>(w.name+' '+w.desc+' '+w.dept+' '+w.currentTools+' '+w.recommendedTools+' '+w.repetitive.join(' ')+' '+(w.keywords||[]).join(' ')).toLowerCase().includes(q)); if(match) state.activeId=match.id; }
