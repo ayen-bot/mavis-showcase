@@ -781,16 +781,29 @@
   .tsteps{margin:0 0 0 18px}.tsteps li{margin:6px 0;font-size:12.5px;color:var(--ink2);line-height:1.55}
   @media(max-width:760px){.qsteps{grid-template-columns:1fr}.csa-two{grid-template-columns:1fr}.trow{grid-template-columns:1fr}}
   /* ===== premium section hero (Tools / CSA / API) ===== */
-  .secHero{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-bottom:20px;background:linear-gradient(135deg,rgba(6,182,212,.12),rgba(99,102,241,.12)),var(--surface2)}
+  .secHero{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:16px;padding:13px 20px;margin-bottom:14px;background:linear-gradient(135deg,rgba(6,182,212,.12),rgba(99,102,241,.12)),var(--surface2)}
   .secHero-orbs{position:absolute;inset:0;pointer-events:none;background:radial-gradient(300px 160px at 88% -20%,rgba(34,211,238,.28),transparent 60%),radial-gradient(260px 160px at 12% 120%,rgba(99,102,241,.26),transparent 60%);opacity:.7}
   .secHero-row{position:relative;display:flex;align-items:center;gap:15px}
-  .secHero-ic{width:50px;height:50px;flex:none;border-radius:14px;background:linear-gradient(135deg,var(--cyan),var(--indigo));display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;box-shadow:0 8px 24px rgba(6,182,212,.4)}
-  .secHero-t{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--ink)}
+  .secHero-ic{width:40px;height:40px;flex:none;border-radius:12px;background:linear-gradient(135deg,var(--cyan),var(--indigo));display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;box-shadow:0 6px 18px rgba(6,182,212,.4)}
+  .secHero-t{font-size:18px;font-weight:800;letter-spacing:-.4px;color:var(--ink)}
   .secHero-s{font-size:12.5px;color:var(--muted);margin-top:3px;max-width:640px;line-height:1.5}.secHero-s b{color:var(--ink)}
-  .heroStats{position:relative;display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
-  .heroStat{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:9px 14px;min-width:96px}
-  .heroStat b{display:block;font-size:18px;font-weight:800;color:var(--cyan);letter-spacing:-.3px}
-  .heroStat span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .heroStats{position:relative;display:flex;flex-wrap:wrap;align-items:baseline;gap:0;margin-top:9px}
+  .heroStat{background:none;border:0;border-radius:0;min-width:0;padding:0;margin-right:14px;display:inline-flex;align-items:baseline;gap:5px;position:relative}
+  .heroStat:not(:last-child){padding-right:14px}
+  .heroStat:not(:last-child)::after{content:"";position:absolute;right:0;top:2px;bottom:1px;width:1px;background:var(--line)}
+  .heroStat b{display:inline;font-size:15px;font-weight:800;color:var(--cyan);letter-spacing:-.2px}
+  .heroStat span{font-size:11.5px;color:var(--muted);text-transform:none;letter-spacing:0}
+  /* emphasis: Automation Opportunities (key value prop) */
+  .card.autoOpp{border:1px solid rgba(6,182,212,.45);background:linear-gradient(135deg,rgba(6,182,212,.07),transparent 60%),var(--surface);box-shadow:0 10px 28px rgba(6,182,212,.12);position:relative}
+  .card.autoOpp>h2.sec,.card.autoOpp .sec-t,.card.autoOpp .c2t{color:var(--acc)}
+  .card.autoOpp::before{content:"\2605  Key value";position:absolute;top:-9px;left:16px;font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,var(--cyan),var(--indigo));border-radius:999px;padding:3px 10px;box-shadow:0 4px 12px rgba(6,182,212,.35)}
+  /* collapsible long sections (accordion) */
+  .foldable{position:relative}
+  .foldtoggle{cursor:pointer;display:flex;align-items:center;gap:10px}
+  .foldable:not(.foldopen)>*:not(.foldtoggle){display:none!important}
+  .foldchev{margin-left:auto;font-size:11px;color:var(--muted);transition:transform .25s;flex:none}
+  .foldable:not(.foldopen) .foldchev{transform:rotate(180deg)}
+  .foldtoggle:hover .foldchev{color:var(--acc)}
   /* richer accordions */
   .acc{transition:border-color .18s,box-shadow .18s}
   .acc:hover{border-color:rgba(6,182,212,.4)}
@@ -800,7 +813,7 @@
   /* copyable prompt box */
   .promptbox{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:10px 0;background:var(--bg)}
   .promptbar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-bottom:1px solid var(--line)}
-  .promptlabel{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--acc)}
+  .promptlabel{font-size:11px;font-weight:700;text-transform:none;letter-spacing:.2px;color:var(--acc)}
   .copybtn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;transition:.16s}
   .copybtn:hover{border-color:var(--cyan);color:var(--acc)}
   .copybtn.done{color:var(--pos);border-color:rgba(16,185,129,.4)}
@@ -980,6 +993,29 @@
   .kbTags{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
   .kbTag{font-size:10.5px;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
   @media(max-width:760px){.kbGrid{grid-template-columns:1fr}}
+  /* ===== CSA Playbook — modern KB redesign (v12.48) ===== */
+  .pbSearch{position:relative;margin-bottom:14px}
+  .pbSearch .pbSearchIco{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--muted);pointer-events:none;line-height:1}
+  .pbSearch .ecoSearch{margin-bottom:0;padding-left:42px}
+  .pbChips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px}
+  .pbChip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:650;color:var(--ink2);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer;transition:.15s}
+  .pbChip:hover{border-color:rgba(6,182,212,.45);color:var(--ink)}
+  .pbChip.active{background:linear-gradient(135deg,var(--cyan),var(--indigo));color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(6,182,212,.25)}
+  .pbChip span{font-weight:800;opacity:.75;font-size:11px}
+  .pbChip.active span{opacity:.95}
+  .pbGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:4px}
+  .pbCard{display:flex;flex-direction:column;text-align:left;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;cursor:pointer;font-family:inherit;transition:transform .16s,border-color .16s,box-shadow .16s;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .pbCard:hover{transform:translateY(-3px);border-color:rgba(6,182,212,.5);box-shadow:0 10px 26px rgba(6,182,212,.14)}
+  .pbCard:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  .pbCardTop{display:flex;align-items:center;gap:11px;margin-bottom:11px}
+  .pbCardIco{flex:none;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;background:var(--bg);border:1px solid var(--line)}
+  .pbCardName{font-size:13.5px;font-weight:750;color:var(--ink);line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .pbBadgeRow{align-self:flex-start;margin-bottom:9px}
+  .pbCardDesc{font-size:12px;color:var(--ink2);line-height:1.5;margin:0 0 14px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:36px}
+  .pbCardFoot{margin-top:auto;font-size:11.5px;font-weight:700;color:var(--acc);display:inline-flex;align-items:center;gap:5px;transition:gap .16s}
+  .pbCard:hover .pbCardFoot{gap:9px}
+  @media(max-width:1024px){.pbGrid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:600px){.pbGrid{grid-template-columns:1fr}}
   /* Industry Playbook Library */
   .indGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
   .indCard{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 15px;cursor:pointer;transition:border-color .16s,box-shadow .16s,transform .16s;font-family:inherit}
@@ -1527,8 +1563,8 @@ const PAGE_TITLES = {
   discover:'Search', overview:'Overview', workflows:'Workflows', opportunities:'Opportunities',
   impact:'Impact', roadmap:'Roadmap',
 };
-const CSA_TAB_TITLES = { discovery:'Client Task Discovery', playbook:'CSA Playbook', industry:'Industry Consultant', comms:'Communication Academy', prompt:'Prompt & Tokens' };
-const CSA_TABS_ORDER = ['discovery','playbook','industry','comms','prompt'];
+const CSA_TAB_TITLES = { discovery:'Client Task Discovery', playbook:'CSA Playbook', method:'CSA Method', industry:'Industry Consultant', comms:'Communication Academy', prompt:'Prompt & Tokens' };
+const CSA_TABS_ORDER = ['discovery','playbook','method','industry','comms','prompt'];
 let pendingCsaTab = null;
 function currentCsaTab(){ return (typeof csaState!=='undefined' && csaState && csaState.tab) || 'discovery'; }
 function titleString(){
@@ -1552,10 +1588,10 @@ function routeFromHash(){
 function activateCsaTab(tab){
   if(CSA_TABS_ORDER.indexOf(tab)<0) tab='discovery';
   csaState.tab=tab;
-  const panels={discovery:'#csaDiscoveryPanel',playbook:'#csaPlaybookPanel',industry:'#csaIndustryPanel',comms:'#csaCommsPanel',prompt:'#csaPromptPanel'};
+  const panels={discovery:'#csaDiscoveryPanel',playbook:'#csaPlaybookPanel',method:'#csaMethodPanel',industry:'#csaIndustryPanel',comms:'#csaCommsPanel',prompt:'#csaPromptPanel'};
   document.querySelectorAll('.csaTab').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
   Object.entries(panels).forEach(([k,sel])=>{ const el=$(sel); if(el) el.style.display=(k===tab)?'':'none'; });
-  if(tab==='playbook' && !csaState.pbBooted){ csaState.pbBooted=true; techWiz.pbCat='tool'; techWiz.pbToolSel=null; techWiz.pbSel=null; techWiz.pbQ=''; renderPlaybookHub($('#csaPlaybookStage')); }
+  if(tab==='playbook' && !csaState.pbBooted){ csaState.pbBooted=true; techWiz.pbCat='all'; techWiz.pbToolSel=null; techWiz.pbSel=null; techWiz.pbQ=''; renderPlaybookHub($('#csaPlaybookStage')); }
   applyPageMeta();
 }
 
@@ -1917,8 +1953,27 @@ function render(){
   const topbar=document.querySelector('#topbar'); if(topbar){ topbar.classList.toggle('hide', hideChrome); topbar.classList.toggle('nobrand', state.view!=='live'&&!hideChrome); }
   const bn=document.querySelector('#banner'); if(bn) bn.style.display=(state.view==='live')?'':'none';
   if(state.view!=='live' && liveTimer){ clearInterval(liveTimer); liveTimer=null; }  // never leave a live-analysis timer running off-view
+  enhanceFold(v);   // make long content sections collapsible to reduce vertical scrolling
   animate(v);
   applyPageMeta();  // set the browser page title + deep-link hash for the current page
+}
+// Progressive enhancement: fold long header-led sections into click-to-collapse accordions.
+// Defaults to open so nothing is hidden on load; only sections taller than ~560px are folded.
+function enhanceFold(root){
+  try{
+    root.querySelectorAll('section.card').forEach(function(sec){
+      var head=sec.querySelector(':scope > h2.sec, :scope > .sec-h, :scope > .c2h');
+      if(!head || sec.offsetHeight < 560) return;
+      sec.classList.add('foldable','foldopen');
+      head.classList.add('foldtoggle');
+      var chev=document.createElement('span'); chev.className='foldchev'; chev.innerHTML='&#9650;';
+      head.appendChild(chev);
+      head.addEventListener('click',function(e){
+        if(e.target.closest('a,button,input,select,textarea') && !e.target.closest('.foldchev')) return;
+        sec.classList.toggle('foldopen');
+      });
+    });
+  }catch(err){}
 }
 
 const DONUT_COLORS=['#06B6D4','#6366F1','#22D3EE','#818CF8','#10B981','#F59E0B','#14B8A6','#94A3B8'];
@@ -2240,7 +2295,7 @@ function wireAccordion(){
   document.querySelectorAll('#view .acc-h').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('open'));
   document.querySelectorAll('#view .copybtn').forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const pre=b.closest('.promptbox').querySelector('.prompttext'); const t=pre.textContent; try{ navigator.clipboard.writeText(t); }catch(_){ const r=document.createRange(); r.selectNodeContents(pre); const s=window.getSelection(); s.removeAllRanges(); s.addRange(r); try{document.execCommand('copy');}catch(_){} } const o=b.innerHTML; b.innerHTML='&#10003; Copied'; b.classList.add('done'); setTimeout(()=>{ b.innerHTML=o; b.classList.remove('done'); },1600); });
 }
-function promptBox(text){ return `<div class="promptbox"><div class="promptbar"><span class="promptlabel">&#10022; Prompt &mdash; paste into Ask MAVIS</span><button class="copybtn">&#128203; Copy</button></div><pre class="prompttext">${esc(text)}</pre></div>`; }
+function promptBox(text){ return `<div class="promptbox"><div class="promptbar"><span class="promptlabel">&#10022; Ready-to-use Prompt</span><button class="copybtn">&#128203; Copy</button></div><pre class="prompttext">${esc(text)}</pre></div>`; }
 const BRIEF_TEMPLATE=`Task: Automate the weekly client KPI report
 Client / Account: <name>
 Systems: Google Sheets, Gmail
@@ -2292,6 +2347,7 @@ function viewCSA(){
     <div class="csaTabs">
       <button class="csaTab active" data-tab="discovery">&#9672;&nbsp; Client Task Discovery</button>
       <button class="csaTab" data-tab="playbook">&#128218;&nbsp; CSA Playbook</button>
+      <button class="csaTab" data-tab="method">&#129517;&nbsp; CSA Method</button>
       <button class="csaTab" data-tab="industry">&#127981;&nbsp; Industry Consultant</button>
       <button class="csaTab" data-tab="comms">&#127891;&nbsp; Communication Academy</button>
       <button class="csaTab" data-tab="prompt">&#129504;&nbsp; Prompt &amp; Tokens</button>
@@ -2308,6 +2364,12 @@ function viewCSA(){
     <div class="csaPanel" id="csaPlaybookPanel" style="display:none">
       <div id="csaPlaybookStage"></div>
     </div>
+    <div class="csaPanel" id="csaMethodPanel" style="display:none">
+      <div class="ecoSubh" style="margin-top:0">&#129517; CSA Method &mdash; how to scope, prompt &amp; deliver</div>
+      <p class="wizsub" style="margin:0 0 14px">The end-to-end playbook for turning a client need into a delivered automation: scope the outcome, write the task, run it, then review before it reaches the client.</p>
+      <div class="qsteps">${steps}</div>
+      <div class="accList">${items}</div>
+    </div>
     <div class="csaPanel" id="csaCommsPanel" style="display:none">
       <div class="ecoSubh" style="margin-top:0">&#127891; CSA Communication Academy</div>
       <p class="wizsub" style="margin:0 0 9px">Your on-demand communication coach. Scenario-based playbooks with ready-to-use scripts, frameworks and coaching for the whole client lifecycle — plus a <b>Client Management</b> library for post-onboarding conversations and a <b>Conversation Simulator</b> that scores your practice responses on clarity, empathy, confidence, objection-handling and relationship-building.</p>
@@ -2320,7 +2382,7 @@ function viewCSA(){
     </div>
     <div class="csaPanel" id="csaDiscoveryPanel">
       <div class="csaLookup"><div class="ecoSubh" style="margin-top:0">&#128269; Client Task Discovery</div>
-        <p class="wizsub" style="margin:0 0 9px">Enter the <b>task a client gave you</b>, a <b>tool</b>, or a <b>keyword</b> &mdash; even plain language like &ldquo;they spend too long on invoicing.&rdquo; MAVIS returns the recommended workflow, required capabilities &amp; tools, automation opportunities, ready-to-use prompts, and a client-handoff checklist.</p>
+        <p class="wizsub" style="margin:0 0 9px">Describe the client&rsquo;s <b>task</b>, <b>tool</b>, or <b>workflow</b>. Plain language works, like &ldquo;they spend too long on invoicing.&rdquo; MAVIS returns the recommended workflow, required capabilities &amp; tools, automation opportunities, ready-to-use prompts, and a client-handoff checklist.</p>
         <input id="csaSearch" class="ecoSearch" placeholder="e.g. onboard a new client, invoice sync to QuickBooks, weekly report, HubSpot, follow-up emails..." autocomplete="off">
         <div class="prosChips" id="csaChips">${chips}</div>
         <div id="csaResults"></div></div>
@@ -2331,9 +2393,6 @@ function viewCSA(){
       <input id="indSearch" class="ecoSearch" placeholder="Search industries &mdash; law, healthcare, e-commerce, construction, recruiting..." autocomplete="off">
       <div class="ccount" id="indCount"></div>
       <div id="indResults"></div>
-      <details class="csaPlaybook" style="margin-top:16px"><summary>&#127891; CSA method &mdash; how to scope, prompt &amp; deliver</summary>
-        <div class="qsteps">${steps}</div>
-        <div class="accList">${items}</div></details>
     </div></section>`;
 }
 function wireCSA(){
@@ -3589,41 +3648,60 @@ function kbFilter(cats,q){
   return CSA_KB.map((e,i)=>({e,i})).filter(({e})=>cats.indexOf(e.cat)>=0).filter(({e})=>!toks.length||toks.every(t=>((e.title+' '+e.summary+' '+(e.tags||[]).join(' ')+' '+(e.tools||[]).join(' ')+' '+(e.steps||[]).join(' ')).toLowerCase()).includes(t)));
 }
 function renderPlaybookHub(stage){
-  const cats=[['tool','Tool How-To','🔧',CSA_TOOLS.length],['task','Task Execution','✅',CSA_KB.filter(e=>e.cat==='task').length],['template','Templates','🧩',CSA_KB.filter(e=>e.cat==='template').length]];
+  const taskN=CSA_KB.filter(e=>e.cat==='task').length, tmplN=CSA_KB.filter(e=>e.cat==='template').length;
+  const cats=[['all','All','📚',CSA_TOOLS.length+taskN+tmplN],['tool','Tool How-To','🔧',CSA_TOOLS.length],['task','Task Execution','✅',taskN],['template','Templates','🧩',tmplN]];
   stage.innerHTML=`<div class="wizpanel"><div class="wizh">CSA Playbook &mdash; implementation knowledge base</div>
-    <p class="wizsub">Your primary technical reference during client deployments: tool how-to guides, task best-practices, and reusable templates.</p>
-    <input id="pbQ" class="ecoSearch" placeholder="Search guides &mdash; HubSpot, Stripe webhook, onboarding, CRM template, AI agent..." autocomplete="off">
-    <div class="kbCats" id="pbCats">${cats.map(c=>`<button class="kbCat${c[0]===techWiz.pbCat?' active':''}" data-cat="${c[0]}">${c[2]} ${esc(c[1])} <span>${c[3]}</span></button>`).join('')}</div>
+    <p class="wizsub">Scan, search and open implementation guides fast: tool how-tos, task best-practices and reusable templates.</p>
+    <div class="pbSearch"><span class="pbSearchIco">&#128269;</span><input id="pbQ" class="ecoSearch" placeholder="Search tools, guides, or workflows..." autocomplete="off"></div>
+    <div class="pbChips" id="pbCats">${cats.map(c=>`<button class="pbChip${c[0]===techWiz.pbCat?' active':''}" data-cat="${c[0]}">${c[2]} ${esc(c[1])} <span>${c[3]}</span></button>`).join('')}</div>
     <div class="ccount" id="pbCount"></div><div id="pbResults"></div></div>`;
   const pq=$('#pbQ'); if(pq){ pq.value=techWiz.pbQ||''; pq.addEventListener('input',()=>{ techWiz.pbQ=pq.value; techWiz.pbSel=null; techWiz.pbToolSel=null; renderPBResults(); }); }
-  stage.querySelectorAll('#pbCats .kbCat').forEach(b=>b.onclick=()=>{ techWiz.pbCat=b.dataset.cat; techWiz.pbSel=null; techWiz.pbToolSel=null; stage.querySelectorAll('#pbCats .kbCat').forEach(x=>x.classList.toggle('active',x===b)); renderPBResults(); });
+  stage.querySelectorAll('#pbCats .pbChip').forEach(b=>b.onclick=()=>{ techWiz.pbCat=b.dataset.cat; techWiz.pbSel=null; techWiz.pbToolSel=null; stage.querySelectorAll('#pbCats .pbChip').forEach(x=>x.classList.toggle('active',x===b)); renderPBResults(); });
   renderPBResults();
+}
+// compact, fully-clickable KB card (icon + name + category badge + one-line desc + View Guide)
+function pbCard(item){
+  if(item.kind==='tool'){
+    const t=item.t, ic=TOOL_CAT_ICON[t.category]||'🔧';
+    const desc=(t.useCases&&t.useCases[0])||(t.features&&t.features[0])||('How MAVIS connects and automates with '+t.name);
+    return `<button class="pbCard" data-kind="tool" data-i="${item.i}">
+      <div class="pbCardTop"><span class="pbCardIco">${ic}</span><span class="pbCardName">${esc(t.name)}</span></div>
+      <span class="kbBadge kb-tool pbBadgeRow">${esc(t.category)}</span>
+      <div class="pbCardDesc">${esc(desc)}</div>
+      <span class="pbCardFoot">View Guide &rarr;</span></button>`;
+  }
+  const e=item.e;
+  const meta={task:['Task Execution','✅'],template:['Template','🧩'],integration:['Integration','🔌'],trouble:['Troubleshooting','🛠'],tool:['Tool How-To','🔧']}[e.cat]||['Guide','📄'];
+  return `<button class="pbCard" data-kind="kb" data-i="${item.i}">
+    <div class="pbCardTop"><span class="pbCardIco">${meta[1]}</span><span class="pbCardName">${esc(e.title)}</span></div>
+    <span class="kbBadge kb-${e.cat} pbBadgeRow">${meta[0]}</span>
+    <div class="pbCardDesc">${esc(e.summary)}</div>
+    <span class="pbCardFoot">View Guide &rarr;</span></button>`;
 }
 function renderPBResults(){
   const box=$('#pbResults'), cnt=$('#pbCount'); if(!box) return;
   const q=(techWiz.pbQ||'').trim().toLowerCase();
-  if(techWiz.pbCat==='tool'){
-    if(techWiz.pbToolSel!=null && CSA_TOOLS[techWiz.pbToolSel]){
-      box.innerHTML=`<div class="wizrow" style="margin:6px 0 12px"><button class="wizghost" id="pbBack">&larr; Back to tool guides</button></div>${toolDetail(CSA_TOOLS[techWiz.pbToolSel])}`;
-      const bk=$('#pbBack'); if(bk) bk.onclick=()=>{ techWiz.pbToolSel=null; renderPBResults(); }; if(cnt) cnt.textContent=''; bindCopy(); return;
-    }
-    const toks=q.split(/[^a-z0-9]+/).filter(t=>t.length>1);
-    let list=CSA_TOOLS.map((t,i)=>({t,i}));
-    if(toks.length) list=list.filter(({t})=>{ const hay=(t.name+' '+t.category+' '+(t.features||[]).join(' ')+' '+(t.useCases||[]).join(' ')+' '+(t.workflows||[]).join(' ')).toLowerCase(); return toks.every(x=>hay.includes(x)); });
-    if(cnt) cnt.textContent=`${list.length} tool guide${list.length===1?'':'s'}`;
-    box.innerHTML=list.length?`<div class="kbGrid">${list.map(({t,i})=>toolCard(t,i)).join('')}</div>`:`<div class="csaResHint">No tool matches &mdash; try <b>Salesforce</b>, <b>Notion</b>, <b>Stripe</b>, or <b>n8n</b>.</div>`;
-    box.querySelectorAll('.toolOpen').forEach(b=>b.onclick=()=>{ techWiz.pbToolSel=+b.dataset.i; renderPBResults(); const r=$('#pbResults'); if(r) r.scrollIntoView({behavior:'smooth',block:'nearest'}); });
-    return;
+  // detail views (a card was opened)
+  if(techWiz.pbToolSel!=null && CSA_TOOLS[techWiz.pbToolSel]){
+    box.innerHTML=`<div class="wizrow" style="margin:6px 0 12px"><button class="wizghost" id="pbBack">&larr; Back to guides</button></div>${toolDetail(CSA_TOOLS[techWiz.pbToolSel])}`;
+    const bk=$('#pbBack'); if(bk) bk.onclick=()=>{ techWiz.pbToolSel=null; renderPBResults(); }; if(cnt) cnt.textContent=''; bindCopy(); return;
   }
-  // task / template use CSA_KB
   if(techWiz.pbSel!=null && CSA_KB[techWiz.pbSel]){
     box.innerHTML=`<div class="wizrow" style="margin:6px 0 12px"><button class="wizghost" id="pbBack2">&larr; Back to guides</button></div>${kbDetail(CSA_KB[techWiz.pbSel])}`;
     const bk=$('#pbBack2'); if(bk) bk.onclick=()=>{ techWiz.pbSel=null; renderPBResults(); }; if(cnt) cnt.textContent=''; bindCopy(); return;
   }
-  const list=kbFilter([techWiz.pbCat],q);
-  if(cnt) cnt.textContent=`${list.length} guide${list.length===1?'':'s'}`;
-  box.innerHTML=list.length?`<div class="kbGrid">${list.map(({e,i})=>kbCard(e,i)).join('')}</div>`:`<div class="csaResHint">No guides match your search.</div>`;
-  box.querySelectorAll('.kbOpen').forEach(b=>b.onclick=()=>{ techWiz.pbSel=+b.dataset.i; renderPBResults(); const r=$('#pbResults'); if(r) r.scrollIntoView({behavior:'smooth',block:'nearest'}); });
+  // build unified list for the active category (All merges tools + tasks + templates)
+  const toks=q.split(/[^a-z0-9]+/).filter(t=>t.length>1);
+  const toolItems=()=>{ let l=CSA_TOOLS.map((t,i)=>({kind:'tool',i,t})); if(toks.length) l=l.filter(({t})=>{ const hay=(t.name+' '+t.category+' '+(t.features||[]).join(' ')+' '+(t.useCases||[]).join(' ')+' '+(t.workflows||[]).join(' ')).toLowerCase(); return toks.every(x=>hay.includes(x)); }); return l; };
+  const kbItems=(cat)=>kbFilter([cat],q).map(({e,i})=>({kind:'kb',i,e}));
+  let items;
+  if(techWiz.pbCat==='tool') items=toolItems();
+  else if(techWiz.pbCat==='task') items=kbItems('task');
+  else if(techWiz.pbCat==='template') items=kbItems('template');
+  else items=[...toolItems(),...kbItems('task'),...kbItems('template')];
+  if(cnt) cnt.textContent=`${items.length} guide${items.length===1?'':'s'}`;
+  box.innerHTML=items.length?`<div class="pbGrid">${items.map(pbCard).join('')}</div>`:`<div class="csaResHint">No guides match &mdash; try <b>Salesforce</b>, <b>OAuth</b>, <b>onboarding</b>, or a <b>CRM template</b>.</div>`;
+  box.querySelectorAll('.pbCard').forEach(b=>b.onclick=()=>{ if(b.dataset.kind==='tool'){ techWiz.pbToolSel=+b.dataset.i; } else { techWiz.pbSel=+b.dataset.i; } renderPBResults(); const r=$('#pbResults'); if(r) r.scrollIntoView({behavior:'smooth',block:'nearest'}); });
 }
 function renderIntegrationHub(stage){
   if(techWiz.intgAssist){
@@ -3667,7 +3745,7 @@ function renderTrouble(stage){
   if(techWiz.tIssue==null){
     const cards=TROUBLE.map((is,i)=>`<button class="issueCard" data-i="${i}" data-hay="${esc((is.t+' '+is.symptom+' '+is.cause).toLowerCase())}"><div class="issueTop"><span class="issueT">${esc(is.t)}</span>${sev(is.sev)}</div><div class="issueS">${esc(is.symptom)}</div></button>`).join('');
     stage.innerHTML=`<div class="wizpanel"><div class="wizh">What are you seeing?</div><p class="wizsub">Search or pick an issue &mdash; MAVIS will walk you through a guided diagnosis, one step at a time.</p>
-      <input id="issueQ" class="ecoSearch" placeholder="Describe or search the issue - "401", "webhook", "permission denied"..." autocomplete="off">
+      <input id="issueQ" class="ecoSearch" placeholder="Describe or search the issue: &ldquo;401&rdquo;, &ldquo;webhook&rdquo;, &ldquo;permission denied&rdquo;..." autocomplete="off">
       <div class="issueList" id="issueList">${cards}</div></div>`;
     const q=$('#issueQ'); q.addEventListener('input',()=>{ const t=q.value.trim().toLowerCase(); stage.querySelectorAll('.issueCard').forEach(c=>{ c.style.display=(!t||c.dataset.hay.includes(t))?'':'none'; }); });
     stage.querySelectorAll('.issueCard').forEach(c=>c.onclick=()=>{ techWiz.tIssue=+c.dataset.i; techWiz.tStep=0; techWiz.tTried=[]; techWiz.tDone=null; techWiz.resolvedAt=null; renderTech(); });
@@ -3937,7 +4015,7 @@ function cardWorkflow(w){
     <div class="field"><div class="k">MAVIS confidence</div><div class="v">${w.confidence}%</div></div></section>`;
 }
 function cardOpp(w){
-  return `<section class="card"><h2 class="sec">Automation Opportunities</h2>
+  return `<section class="card autoOpp"><h2 class="sec">Automation Opportunities</h2>
     <div class="field"><div class="k">Repetitive tasks detected</div><div class="v">${w.repetitive.map(r=>`<span class="chip type">${esc(r)}</span>`).join('')}</div></div>
     <div class="field"><div class="k">Recommended automation</div><div class="v"><span class="chip">${esc(w.autoType)}</span><p style="margin-top:6px;color:var(--ink2)">${esc(w.autoRec)}</p></div></div>
     <div class="field"><div class="k">AI agents deployed</div><div class="v">${w.aiAgents.map(a=>`<span class="chip ai">${esc(a)}</span>`).join('')}</div></div></section>`;
@@ -4375,7 +4453,7 @@ function secWorkflow(w){
 function secOpps(w){
   const pr=['High','Medium','Low'];
   const rows=w.repetitive.map((r,i)=>{ const p=pr[Math.min(i,2)]; return `<div class="opprow"><div class="oppl"><div class="oppt">${esc(r)}</div><div class="oppd">${esc(REC_MAP[r]||'Automated with a MAVIS agent')}</div></div><span class="pill p-${p}">${p}</span></div>`; }).join('');
-  return `<section class="card"><div class="sec-h"><div class="rbadge b2">&#9889;</div><div><div class="sec-t">Automation Opportunities</div><div class="sec-s">Repetitive tasks detected and how MAVIS automates them</div></div></div>
+  return `<section class="card autoOpp"><div class="sec-h"><div class="rbadge b2">&#9889;</div><div><div class="sec-t">Automation Opportunities</div><div class="sec-s">Repetitive tasks detected and how MAVIS automates them</div></div></div>
     <div class="opplist">${rows}</div>
     <div class="oppfoot"><b>Recommended approach:</b> ${esc(w.autoType)} &middot; ${esc(w.autoRec)}</div></section>`;
 }
@@ -4519,7 +4597,7 @@ function cardWorkflow2(w){
 function cardOpps2(w){
   const n=w.repetitive.length||1, perH=Math.round(w.annualHours/n), perC=Math.round(w.annualCost/n);
   const rows=w.repetitive.map((r,i)=>`<div class="op2row"><div class="op2i">&#9889;</div><div class="op2l"><div class="op2t">${esc(REC_MAP[r]?('Automate '+r.toLowerCase()):r)}</div><div class="op2d">${esc(REC_MAP[r]||'MAVIS agent automation')}</div></div><div class="op2v"><div>${perH} hrs/yr</div><div class="op2s">${money(perC)}</div></div></div>`).join('');
-  return `<section class="card s2card"><div class="c2h"><div class="rbadge b2">&#9889;</div><div class="c2t">Top Automation Opportunities (${n})</div></div>
+  return `<section class="card s2card autoOpp"><div class="c2h"><div class="rbadge b2">&#9889;</div><div class="c2t">Top Automation Opportunities (${n})</div></div>
     <div class="op2list">${rows}</div><a class="rlink" data-view>View all opportunities &rarr;</a></section>`;
 }
 function cardRoadmap2(w){
