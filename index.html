@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>MAVIS — My Advanced Virtual Intelligence System</title>
+<title>CSA Knowledge Hub</title>
 <style>
   :root{
     --bg:#0F172A; --surface:#1E293B; --surface2:#172033; --line:#334155;
@@ -1456,21 +1456,22 @@
 <body>
 <div class="shell">
   <aside class="sidebar">
-    <div class="sbrand"><div class="logo">M</div><div><b>MAVIS</b><span>Automation Intelligence</span></div><button class="themetoggle" id="themeBtn" title="Switch theme" aria-label="Toggle dark and light mode">&#9789;</button></div>
+    <div class="sbrand"><div class="logo">K</div><div><b>CSA Knowledge Hub</b><span>Powered by MAVIS</span></div><button class="themetoggle" id="themeBtn" title="Switch theme" aria-label="Toggle dark and light mode">&#9789;</button></div>
     <nav id="nav"></nav>
     <div class="askbox">
-      <div class="askt">MAVIS AI Assistant</div>
-      <div class="asksub">Ask anything about this analysis</div>
-      <button class="askbtn" id="askBtn">&#10022;&nbsp; Ask MAVIS</button>
+      <div class="askt">Ask the Tech Team</div>
+      <div class="asksub">Get help from the team</div>
+      <button class="askbtn" id="askCsaBtn">&#10022;&nbsp; Ask CSA Tech</button>
+      <button class="askbtn" id="askBlancheBtn" style="margin-top:8px">&#10022;&nbsp; Ask Blanche</button>
     </div>
   </aside>
 
   <main class="main">
     <div class="topbar" id="topbar">
       <div class="brand" id="brandHead">
-        <div class="logo">M</div>
+        <div class="logo">K</div>
         <div>
-          <h1>MAVIS <span style="color:var(--muted);font-weight:600;font-size:15px">(My Advanced Virtual Intelligence System)</span></h1>
+          <h1>CSA Knowledge Hub <span style="color:var(--muted);font-weight:600;font-size:15px">(powered by MAVIS)</span></h1>
           <p>Analyzes recurring work, detects automation opportunities, and builds a roadmap in real time</p>
         </div>
       </div>
@@ -1504,7 +1505,7 @@
 
     <div class="banner" id="banner">These are real MAVIS capabilities. Figures are modeled estimates of the time your team saves by delegating each task to MAVIS.</div>
     <div id="view"></div>
-    <footer>MAVIS &middot; Capability Showcase &middot; Sample dataset</footer>
+    <footer>CSA Knowledge Hub &middot; Sample dataset</footer>
   </main>
 </div>
 
@@ -1512,10 +1513,9 @@
 <div class="drawer" id="drawer"></div>
 
 <div class="askpanel" id="askPanel">
-  <div class="askhead"><span class="adot"></span>Ask MAVIS<span class="ac" id="askClose">&times;</span></div>
+  <div class="askhead"><span class="adot"></span><span id="askTarget">Ask the Tech Team</span><span class="ac" id="askClose">&times;</span></div>
   <div class="askmsgs" id="askMsgs"></div>
-  <div class="askchips" id="askChips"></div>
-  <div class="askinput"><input id="askIn" placeholder="Ask about savings, tasks, tools, ROI..." autocomplete="off"><button id="askSend">Send</button></div>
+  <div class="askinput"><input id="askIn" placeholder="Describe what you need help with..." autocomplete="off"><button id="askSend">Send</button></div>
 </div>
 
 <script>
@@ -4679,12 +4679,17 @@ document.addEventListener('click',(ev)=>{ if(!ev.target.closest('.searchwrap')) 
 document.addEventListener('keydown',(ev)=>{ if(ev.key==='Escape'){ closeDrawer(); closeAsk(); $('#results').classList.remove('open'); } });
 
 // Ask MAVIS wiring
-$('#askChips').innerHTML=`<span class="qchipLbl">Pick your industry:</span>`+ASK_VERTICALS.map(v=>`<span class="qchip" data-vert="${esc(v.name)}">${v.ic} ${esc(v.name)}</span>`).join('');
+if($('#askChips'))$('#askChips').innerHTML=`<span class="qchipLbl">Pick your industry:</span>`+ASK_VERTICALS.map(v=>`<span class="qchip" data-vert="${esc(v.name)}">${v.ic} ${esc(v.name)}</span>`).join('');
 document.querySelectorAll('#askChips .qchip').forEach(c=>c.onclick=()=>askSubmit(c.getAttribute('data-vert')));
-$('#askBtn').onclick=openAsk;
+let ASK_TARGET='the Tech Team';
+const ASK_RELAY_URL='https://script.google.com/macros/s/AKfycbygOelO9WXgKePSncxGifyQrr4voHaMlND8fGpr8J-bxnid7C7SREidVs6OjSrdwYMCVQ/exec';
+openAsk=function(target){ if(target)ASK_TARGET=target; const p=$('#askPanel'); p.classList.add('open'); const t=$('#askTarget'); if(t)t.textContent='Ask '+ASK_TARGET; const box=$('#askMsgs'); box.innerHTML=''; box.dataset.init='1'; askAddMsg('This will go to <b>'+esc(ASK_TARGET)+'</b>. Type your question below and we\'ll post it to their Google Chat space.','bot'); $('#askIn').focus(); };
+function askRoute(q){ q=(q||'').trim(); if(!q)return; askAddMsg(esc(q),'user'); var _target=ASK_TARGET; fetch(ASK_RELAY_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({target:_target,text:q})}).then(function(){ askAddMsg('Sent to <b>'+esc(_target)+'</b>. It just posted to their Google Chat space and they\'ll reply there.','bot'); }).catch(function(){ askAddMsg('That didn\'t send. Please try again in a moment, or reach out to your CSA directly.','bot'); }); }
+var _csa=$('#askCsaBtn'); if(_csa)_csa.onclick=()=>openAsk('CSA Tech');
+var _bl=$('#askBlancheBtn'); if(_bl)_bl.onclick=()=>openAsk('Blanche');
 $('#askClose').onclick=closeAsk;
-$('#askSend').onclick=()=>{ const inp=$('#askIn'); askSubmit(inp.value); inp.value=''; };
-$('#askIn').addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ askSubmit($('#askIn').value); $('#askIn').value=''; } });
+$('#askSend').onclick=()=>{ const inp=$('#askIn'); askRoute(inp.value); inp.value=''; };
+$('#askIn').addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ askRoute($('#askIn').value); $('#askIn').value=''; } });
 
 // Business-vertical bar under the global search (same verticals + engine as Ask MAVIS)
 (function initVertbar(){

@@ -3157,12 +3157,17 @@ document.addEventListener('click',(ev)=>{ if(!ev.target.closest('.searchwrap')) 
 document.addEventListener('keydown',(ev)=>{ if(ev.key==='Escape'){ closeDrawer(); closeAsk(); $('#results').classList.remove('open'); } });
 
 // Ask MAVIS wiring
-$('#askChips').innerHTML=`<span class="qchipLbl">Pick your industry:</span>`+ASK_VERTICALS.map(v=>`<span class="qchip" data-vert="${esc(v.name)}">${v.ic} ${esc(v.name)}</span>`).join('');
+if($('#askChips'))$('#askChips').innerHTML=`<span class="qchipLbl">Pick your industry:</span>`+ASK_VERTICALS.map(v=>`<span class="qchip" data-vert="${esc(v.name)}">${v.ic} ${esc(v.name)}</span>`).join('');
 document.querySelectorAll('#askChips .qchip').forEach(c=>c.onclick=()=>askSubmit(c.getAttribute('data-vert')));
-$('#askBtn').onclick=openAsk;
+let ASK_TARGET='the Tech Team';
+const ASK_RELAY_URL='https://script.google.com/macros/s/AKfycbygOelO9WXgKePSncxGifyQrr4voHaMlND8fGpr8J-bxnid7C7SREidVs6OjSrdwYMCVQ/exec';
+openAsk=function(target){ if(target)ASK_TARGET=target; const p=$('#askPanel'); p.classList.add('open'); const t=$('#askTarget'); if(t)t.textContent='Ask '+ASK_TARGET; const box=$('#askMsgs'); box.innerHTML=''; box.dataset.init='1'; askAddMsg('This will go to <b>'+esc(ASK_TARGET)+'</b>. Type your question below and we\'ll post it to their Google Chat space.','bot'); $('#askIn').focus(); };
+function askRoute(q){ q=(q||'').trim(); if(!q)return; askAddMsg(esc(q),'user'); var _target=ASK_TARGET; fetch(ASK_RELAY_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({target:_target,text:q})}).then(function(){ askAddMsg('Sent to <b>'+esc(_target)+'</b>. It just posted to their Google Chat space and they\'ll reply there.','bot'); }).catch(function(){ askAddMsg('That didn\'t send. Please try again in a moment, or reach out to your CSA directly.','bot'); }); }
+var _csa=$('#askCsaBtn'); if(_csa)_csa.onclick=()=>openAsk('CSA Tech');
+var _bl=$('#askBlancheBtn'); if(_bl)_bl.onclick=()=>openAsk('Blanche');
 $('#askClose').onclick=closeAsk;
-$('#askSend').onclick=()=>{ const inp=$('#askIn'); askSubmit(inp.value); inp.value=''; };
-$('#askIn').addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ askSubmit($('#askIn').value); $('#askIn').value=''; } });
+$('#askSend').onclick=()=>{ const inp=$('#askIn'); askRoute(inp.value); inp.value=''; };
+$('#askIn').addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ askRoute($('#askIn').value); $('#askIn').value=''; } });
 
 // Business-vertical bar under the global search (same verticals + engine as Ask MAVIS)
 (function initVertbar(){

@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>MAVIS — My Advanced Virtual Intelligence System</title>
+<title>CSA Knowledge Hub</title>
 <style>
   :root{
     --bg:#0F172A; --surface:#1E293B; --surface2:#172033; --line:#334155;
@@ -1456,21 +1456,22 @@
 <body>
 <div class="shell">
   <aside class="sidebar">
-    <div class="sbrand"><div class="logo">M</div><div><b>MAVIS</b><span>Automation Intelligence</span></div><button class="themetoggle" id="themeBtn" title="Switch theme" aria-label="Toggle dark and light mode">&#9789;</button></div>
+    <div class="sbrand"><div class="logo">K</div><div><b>CSA Knowledge Hub</b><span>Powered by MAVIS</span></div><button class="themetoggle" id="themeBtn" title="Switch theme" aria-label="Toggle dark and light mode">&#9789;</button></div>
     <nav id="nav"></nav>
     <div class="askbox">
-      <div class="askt">MAVIS AI Assistant</div>
-      <div class="asksub">Ask anything about this analysis</div>
-      <button class="askbtn" id="askBtn">&#10022;&nbsp; Ask MAVIS</button>
+      <div class="askt">Ask the Tech Team</div>
+      <div class="asksub">Get help from the team</div>
+      <button class="askbtn" id="askCsaBtn">&#10022;&nbsp; Ask CSA Tech</button>
+      <button class="askbtn" id="askBlancheBtn" style="margin-top:8px">&#10022;&nbsp; Ask Blanche</button>
     </div>
   </aside>
 
   <main class="main">
     <div class="topbar" id="topbar">
       <div class="brand" id="brandHead">
-        <div class="logo">M</div>
+        <div class="logo">K</div>
         <div>
-          <h1>MAVIS <span style="color:var(--muted);font-weight:600;font-size:15px">(My Advanced Virtual Intelligence System)</span></h1>
+          <h1>CSA Knowledge Hub <span style="color:var(--muted);font-weight:600;font-size:15px">(powered by MAVIS)</span></h1>
           <p>Analyzes recurring work, detects automation opportunities, and builds a roadmap in real time</p>
         </div>
       </div>
@@ -1504,7 +1505,7 @@
 
     <div class="banner" id="banner">These are real MAVIS capabilities. Figures are modeled estimates of the time your team saves by delegating each task to MAVIS.</div>
     <div id="view"></div>
-    <footer>MAVIS &middot; Capability Showcase &middot; Sample dataset</footer>
+    <footer>CSA Knowledge Hub &middot; Sample dataset</footer>
   </main>
 </div>
 
@@ -1512,10 +1513,9 @@
 <div class="drawer" id="drawer"></div>
 
 <div class="askpanel" id="askPanel">
-  <div class="askhead"><span class="adot"></span>Ask MAVIS<span class="ac" id="askClose">&times;</span></div>
+  <div class="askhead"><span class="adot"></span><span id="askTarget">Ask the Tech Team</span><span class="ac" id="askClose">&times;</span></div>
   <div class="askmsgs" id="askMsgs"></div>
-  <div class="askchips" id="askChips"></div>
-  <div class="askinput"><input id="askIn" placeholder="Ask about savings, tasks, tools, ROI..." autocomplete="off"><button id="askSend">Send</button></div>
+  <div class="askinput"><input id="askIn" placeholder="Describe what you need help with..." autocomplete="off"><button id="askSend">Send</button></div>
 </div>
 
 <script>
