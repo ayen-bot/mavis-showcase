@@ -1868,8 +1868,11 @@ __APP_JS__
      the "CSA Tech - Ticket Log" sheet. Blank just skips logging (form still works). */
   var TICKET_LOG_URL="https://script.google.com/macros/s/AKfycbyMTDZcYM2mXCDEbXSA6n6Uy_Q1RKefnp3hZ3wG9dx35AZcyLd7ws9X9Wt51vcHJHM/exec";
   function logTicket(payload){
-    if(!TICKET_LOG_URL)return;
-    try{ fetch(TICKET_LOG_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)}); }catch(e){}
+    if(!TICKET_LOG_URL) return Promise.resolve(null);
+    return fetch(TICKET_LOG_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)})
+      .then(function(r){return r.text();})
+      .then(function(t){ try{ return (JSON.parse(t)||{}).ticketId||null; }catch(e){ return null; } })
+      .catch(function(){ return null; });
   }
 
   function setSched(a){ g("tkSched").innerHTML = a? schedHTML(a) : "Select a client to load the schedule."; }
@@ -2000,10 +2003,9 @@ __APP_JS__
     var tried=Array.prototype.slice.call(document.querySelectorAll("input[id^='tkts']:checked")).map(function(x){return x.value;}).join(", ");
     var payload={ticketId:id,submittedAt:fmtDate(now),csa:state.csa,client:state.client,schedule:(state.assign?state.assign.setup:""),category:CATS[state.cat].label,subcategory:state.sub,title:titleVal,description:g("tkDesc").value,issueStarted:g("tkStart").value,impact:impTitle,priority:prio+" "+s.label,owner:"",status:"New",firstResponseDue:fmtDate(respBy),resolutionDue:fmtDate(resolveBy),errorMessage:g("tkErr").value,troubleshooting:tried};
     if(screenshotData){ payload.screenshotBase64=screenshotData.b64; payload.screenshotName=screenshotData.name; payload.screenshotType=screenshotData.type; }
-    logTicket(payload);
-
     g("tkBody").innerHTML=successHTML();
-    g("tkOkId").textContent=id;
+    g("tkOkId").textContent="Assigning...";
+    logTicket(payload).then(function(serverId){ var el=g("tkOkId"); if(el) el.textContent=serverId||id; });
     g("tkOkTime").textContent=fmtDate(now);
     g("tkOkWho").textContent=state.csa+" / "+state.client;
     g("tkOkTitle").textContent=titleVal;
