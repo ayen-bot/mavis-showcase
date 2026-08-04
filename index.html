@@ -5013,7 +5013,6 @@ $('#askIn').addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ askRoute($('#
       '<div style="height:14px"></div>'+
       '<div class="tkauto">'+
         '<div class="tkrow"><span class="k">Assigned priority</span><span class="v" id="tkPvPrio"><span class="tkpill tkp4">Pending</span></span></div>'+
-        '<div class="tkrow"><span class="k">Routed to</span><span class="v" id="tkPvOwner">Select category and impact</span></div>'+
         '<div class="tkrow"><span class="k">Target first response</span><span class="v" id="tkPvResp">Not set</span></div>'+
         '<div class="tkrow"><span class="k">Target resolution</span><span class="v" id="tkPvResolve">Not set</span></div>'+
       '</div>'+
@@ -5033,7 +5032,6 @@ $('#askIn').addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ askRoute($('#
         '<div class="tkrow"><span class="k">Schedule</span><span class="v" id="tkOkSched">Not set</span></div>'+
         '<div class="tkrow"><span class="k">Category</span><span class="v" id="tkOkCat">Not set</span></div>'+
         '<div class="tkrow"><span class="k">Priority</span><span class="v" id="tkOkPrio">Not set</span></div>'+
-        '<div class="tkrow"><span class="k">Routed to</span><span class="v" id="tkOkOwner">Not set</span></div>'+
       '</div>'+
       '<div style="margin-top:14px"><label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Status</label><div class="tkstep" id="tkOkStep"></div></div>'+
       '<div style="margin-top:14px"><label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">SLA timer</label><div class="tksla"><div class="box live"><div class="lab">First response due in</div><div class="big" id="tkOkCountdown">Not set</div></div><div class="box"><div class="lab">Resolution target</div><div class="big" id="tkOkResolveBy">Not set</div></div></div></div>'+
@@ -5099,12 +5097,12 @@ $('#askIn').addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ askRoute($('#
   }
   function updatePreview(){
     var prio=computePriority(state.cat,state.impact);
-    var pv=g("tkPvPrio"),ow=g("tkPvOwner"),rr=g("tkPvResp"),rs=g("tkPvResolve");
+    var pv=g("tkPvPrio"),rr=g("tkPvResp"),rs=g("tkPvResolve");
     if(!pv)return;
-    if(!prio){ pv.innerHTML='<span class="tkpill tkp4">Pending</span>'; ow.textContent=state.cat?CATS[state.cat].owner:"Select category and impact"; rr.innerHTML="Not set"; rs.innerHTML="Not set"; return; }
+    if(!prio){ pv.innerHTML='<span class="tkpill tkp4">Pending</span>'; rr.innerHTML="Not set"; rs.innerHTML="Not set"; return; }
     var s=SLA[prio];
     pv.innerHTML='<span class="tkpill '+s.cls+'">'+prio+' '+s.label+'</span>';
-    ow.textContent=CATS[state.cat].owner; rr.textContent=humanMins(s.respMin); rs.textContent=s.resolveLabel;
+    rr.textContent=humanMins(s.respMin); rs.textContent=s.resolveLabel;
   }
 
   function wireForm(){
@@ -5179,7 +5177,7 @@ $('#askIn').addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ askRoute($('#
 
     var impTitle=(IMPACTS.filter(function(i){return i.id===state.impact;})[0]||{}).title||state.impact;
     var tried=Array.prototype.slice.call(document.querySelectorAll("input[id^='tkts']:checked")).map(function(x){return x.value;}).join(", ");
-    var payload={ticketId:id,submittedAt:fmtDate(now),csa:state.csa,client:state.client,schedule:(state.assign?state.assign.setup:""),category:CATS[state.cat].label,subcategory:state.sub,title:titleVal,description:g("tkDesc").value,issueStarted:g("tkStart").value,impact:impTitle,priority:prio+" "+s.label,owner:CATS[state.cat].owner,status:"New",firstResponseDue:fmtDate(respBy),resolutionDue:fmtDate(resolveBy),errorMessage:g("tkErr").value,troubleshooting:tried};
+    var payload={ticketId:id,submittedAt:fmtDate(now),csa:state.csa,client:state.client,schedule:(state.assign?state.assign.setup:""),category:CATS[state.cat].label,subcategory:state.sub,title:titleVal,description:g("tkDesc").value,issueStarted:g("tkStart").value,impact:impTitle,priority:prio+" "+s.label,owner:"",status:"New",firstResponseDue:fmtDate(respBy),resolutionDue:fmtDate(resolveBy),errorMessage:g("tkErr").value,troubleshooting:tried};
     if(screenshotData){ payload.screenshotBase64=screenshotData.b64; payload.screenshotName=screenshotData.name; payload.screenshotType=screenshotData.type; }
     logTicket(payload);
 
@@ -5191,7 +5189,6 @@ $('#askIn').addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ askRoute($('#
     g("tkOkSched").textContent=state.assign?state.assign.setup:"Not set";
     g("tkOkCat").textContent=CATS[state.cat].label+" · "+state.sub;
     g("tkOkPrio").innerHTML='<span class="tkpill '+s.cls+'">'+prio+' '+s.label+'</span>';
-    g("tkOkOwner").textContent=CATS[state.cat].owner;
     var st=g("tkOkStep"); st.innerHTML=STATUSES.map(function(x,i){return '<div class="s'+(i===0?' on':'')+'">'+esc(x)+'</div>';}).join('');
     g("tkOkResolveBy").textContent=fmtDate(resolveBy);
 
