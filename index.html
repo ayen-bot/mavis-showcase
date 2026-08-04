@@ -4701,5 +4701,526 @@ $('#askIn').addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ askRoute($('#
 
 
 </script>
+<style id="tkCSS">
+  /* ===== Ask CSA Tech -> Ticketing (themed to hub vars) ===== */
+  .tkbg{position:fixed;inset:0;background:rgba(8,12,24,.66);backdrop-filter:blur(3px);z-index:90;display:none;opacity:0;transition:opacity .25s}
+  .tkbg.open{display:block;opacity:1}
+  html[data-theme="light"] .tkbg{background:rgba(15,23,42,.42)}
+  .tkpanel{position:fixed;top:0;right:0;height:100%;width:min(720px,97vw);background:var(--surface);border-left:1px solid var(--line);z-index:95;
+    transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);overflow:auto;box-shadow:-20px 0 60px rgba(0,0,0,.5);display:flex;flex-direction:column}
+  .tkpanel.open{transform:translateX(0)}
+  .tkhead{position:sticky;top:0;z-index:2;background:linear-gradient(135deg,rgba(6,182,212,.20),rgba(99,102,241,.20)),var(--surface2);
+    padding:16px 20px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--line)}
+  .tkhead .adot{width:9px;height:9px;border-radius:50%;background:var(--emerald);box-shadow:0 0 8px var(--emerald)}
+  .tkhead h3{font-size:15.5px;font-weight:750;margin:0}
+  .tkhead p{font-size:11.5px;color:var(--muted);margin:2px 0 0}
+  .tkhead .ac{margin-left:auto;cursor:pointer;color:var(--muted);font-size:24px;line-height:1;background:none;border:0;padding:0}
+  .tkbody{padding:20px;overflow:auto}
+  .tksec{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:16px}
+  .tksec h4{margin:0 0 3px;font-size:13.5px;font-weight:750;color:var(--ink)}
+  .tksec .sub{margin:0 0 14px;color:var(--muted);font-size:12px}
+  .tkgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:560px){.tkgrid{grid-template-columns:1fr}}
+  .tkf{margin-bottom:14px}
+  .tkf:last-child{margin-bottom:0}
+  .tkf label{display:block;font-size:12px;font-weight:700;margin:0 0 6px;color:var(--ink)}
+  .tkf .rq{color:var(--rose)}
+  .tktag{font-size:10px;background:var(--bg);color:var(--muted);padding:2px 7px;border-radius:999px;font-weight:700;margin-left:4px;border:1px solid var(--line)}
+  .tkf input[type=text],.tkf select,.tkf textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:11px;
+    font-size:13.5px;font-family:inherit;background:var(--bg);color:var(--ink)}
+  .tkf textarea{min-height:130px;resize:vertical}
+  .tkf input:focus,.tkf select:focus,.tkf textarea:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(6,182,212,.18)}
+  .tkf select:disabled,.tkf input:disabled{opacity:.55;cursor:not-allowed}
+  .tkhint{font-size:11px;color:var(--muted);margin:5px 0 0}
+  .tkread{background:var(--bg);border:1px dashed var(--line);border-radius:11px;padding:11px 12px;font-size:13px;color:var(--ink)}
+  .tkbadge{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.04em;padding:2px 8px;border-radius:999px;margin-right:8px;text-transform:uppercase}
+  .tkbadge.ft{background:rgba(16,185,129,.16);color:var(--emerald)}
+  .tkbadge.pt{background:rgba(99,102,241,.16);color:var(--indigo)}
+  .tksched{color:var(--muted);font-size:12px;margin-top:6px}
+  .tkimp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:560px){.tkimp{grid-template-columns:1fr}}
+  .tkimp label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:11px;padding:12px;cursor:pointer;background:var(--bg);transition:.12s}
+  .tkimp label:hover{border-color:var(--cyan)}
+  .tkimp label.sel{border-color:var(--cyan);background:rgba(6,182,212,.10);box-shadow:0 0 0 2px rgba(6,182,212,.14)}
+  .tkimp input{margin-top:3px}
+  .tkimp b{display:block;font-size:12.5px;color:var(--ink)}
+  .tkimp span{font-size:11px;color:var(--muted)}
+  .tkchecks{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}
+  @media(max-width:560px){.tkchecks{grid-template-columns:1fr}}
+  .tkchecks label{display:flex;gap:9px;align-items:center;font-size:12.5px;color:var(--ink);cursor:pointer}
+  .tkchecks input{width:16px;height:16px}
+  .tkauto{background:linear-gradient(180deg,rgba(6,182,212,.08),transparent),var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .tkrow{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
+  .tkrow:last-child{border-bottom:0}
+  .tkrow .k{color:var(--muted);font-weight:600}
+  .tkrow .v{font-weight:750;text-align:right;color:var(--ink)}
+  .tkpill{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.03em;padding:3px 9px;border-radius:999px}
+  .tkp1{background:rgba(239,68,68,.16);color:var(--rose)}
+  .tkp2{background:rgba(245,158,11,.16);color:var(--amber)}
+  .tkp3{background:rgba(6,182,212,.16);color:var(--cyan)}
+  .tkp4{background:var(--track);color:var(--muted)}
+  .tkstep{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .tkstep .s{flex:1;min-width:88px;text-align:center;font-size:10.5px;font-weight:700;padding:8px 4px;border-radius:9px;background:var(--surface2);color:var(--muted);border:1px solid var(--line)}
+  .tkstep .s.on{background:linear-gradient(135deg,var(--cyan),var(--indigo));color:#fff;border-color:transparent}
+  .tkkb .item{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:11px;margin-bottom:8px;background:var(--bg)}
+  .tkkb .item .dot{width:7px;height:7px;border-radius:999px;background:var(--cyan);margin-top:6px;flex:none}
+  .tkkb .item{cursor:pointer;transition:border-color .12s,background .12s}
+  .tkkb .item:hover{border-color:var(--cyan);background:rgba(6,182,212,.06)}
+  .tkkb .item .tklink{color:var(--acc);font-weight:700;text-decoration:none;font-size:12.5px}
+  .tkkb .item:hover .tklink{text-decoration:underline}
+  .tkkb .item p{margin:2px 0 0;font-size:11px;color:var(--muted)}
+  .tkreader{position:absolute;inset:0;background:var(--surface);z-index:6;overflow:auto;display:none;padding:16px 20px}
+  .tkreader.open{display:block}
+  .tkreaderhd{display:flex;align-items:center;gap:10px;margin-bottom:14px;position:sticky;top:-16px;background:var(--surface);padding:6px 0 10px;border-bottom:1px solid var(--line)}
+  .tkreadertag{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .tkreaderbody{font-size:13.5px}
+  .tkgTitle{font-size:16px;font-weight:800;color:var(--ink);margin:10px 0 4px}
+  .tkgIntro{font-size:12.5px;color:var(--muted);margin:0 0 14px}
+  .tkgSteps{margin:0;padding-left:20px}
+  .tkgSteps li{margin:0 0 12px;font-size:13.5px;color:var(--ink);line-height:1.55}
+  .tkgSteps li::marker{color:var(--cyan);font-weight:800}
+  .tkgFoot{margin-top:14px;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:11px;font-size:12.5px;color:var(--muted)}
+  .tkack{display:flex;gap:9px;align-items:center;font-size:12px;margin-top:8px;font-weight:600;color:var(--ink)}
+  .tkdrop{border:2px dashed var(--line);border-radius:11px;padding:16px;text-align:center;color:var(--muted);font-size:12.5px;cursor:pointer;background:var(--bg)}
+  .tkdrop:hover{border-color:var(--cyan);color:var(--acc)}
+  .tkthumb{max-width:100%;margin-top:10px;border-radius:9px;border:1px solid var(--line)}
+  .tkerr{color:var(--rose);font-size:11.5px;margin-top:4px;font-weight:600;display:none}
+  .tkerr.show{display:block}
+  .tkbtn{font-family:inherit;font-size:13.5px;font-weight:800;border:none;border-radius:11px;padding:12px 22px;cursor:pointer}
+  .tkbtn.primary{background:linear-gradient(135deg,var(--cyan),var(--indigo));color:#fff}
+  .tkbtn.primary:disabled{opacity:.5;cursor:not-allowed}
+  .tkbtn.ghost{background:transparent;color:var(--acc);border:1px solid var(--line)}
+  .tkactions{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center}
+  .tktick{width:50px;height:50px;border-radius:999px;background:rgba(16,185,129,.16);color:var(--emerald);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;margin:0 auto 12px}
+  .tksla{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+  .tksla .box{flex:1;min-width:150px;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:12px}
+  .tksla .box .lab{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+  .tksla .box .big{font-size:17px;font-weight:800;margin-top:2px;color:var(--ink)}
+  .tksla .box.live .big{color:var(--acc)}
+  .tkidbig{text-align:center;font-size:20px;font-weight:800;color:var(--acc);letter-spacing:.02em;margin-bottom:16px}
+</style>
+
+<div class="tkbg" id="tkBg"></div>
+<aside class="tkpanel" id="tkPanel" aria-hidden="true">
+  <div class="tkhead">
+    <span class="adot"></span>
+    <div><h3>Ask CSA Tech &middot; Submit a Ticket</h3><p>Priority, owner, and SLA are set automatically</p></div>
+    <button class="ac" id="tkClose" title="Close">&times;</button>
+  </div>
+  <div class="tkbody" id="tkBody"></div>
+  <div class="tkreader" id="tkReader"></div>
+</aside>
+
+<script>
+(function(){
+  "use strict";
+  /* ---------- DATA from "CSA Schedule" sheet ---------- */
+  var ASSIGNMENTS = [
+    {csa:"Anna Macaya", client:"Structural Prime Builder Inc.", setup:"Part time", days:["12:00 PM to 4:00 PM PDT","12:00 PM to 4:00 PM PDT","12:00 PM to 4:00 PM PDT","12:00 PM to 4:00 PM PDT","12:00 PM to 4:00 PM PDT"]},
+    {csa:"Anna Macaya", client:"THE NYBB GROUP, LLC.", setup:"Part time", days:["7:00 AM to 11:00 AM PDT","7:00 AM to 11:00 AM PDT","7:00 AM to 11:00 AM PDT","7:00 AM to 11:00 AM PDT","7:00 AM to 11:00 AM PDT"]},
+    {csa:"Matthew Conopio", client:"ATS Group", setup:"Part time", days:["7:00 AM to 11:00 AM PDT","7:00 AM to 11:00 AM PDT","7:00 AM to 11:00 AM PDT","7:00 AM to 11:00 AM PDT","7:00 AM to 11:00 AM PDT"]},
+    {csa:"Matthew Conopio", client:"3P-Events, LLC", setup:"Part time", days:["8:00 AM to 12:00 PM PDT","8:00 AM to 12:00 PM PDT","8:00 AM to 12:00 PM PDT","8:00 AM to 12:00 PM PDT","8:00 AM to 12:00 PM PDT"]},
+    {csa:"Chris Uddin", client:"Majestic Property Management, Inc", setup:"Part time", days:["9:00 AM to 1:00 PM PDT","9:00 AM to 1:00 PM PDT","9:00 AM to 1:00 PM PDT","9:00 AM to 1:00 PM PDT","9:00 AM to 1:00 PM PDT"]},
+    {csa:"Chris Uddin", client:"Souk Systems (MAVIS)", setup:"Part time", days:["9:00 AM to 1:00 PM PDT","9:00 AM to 1:00 PM PDT","9:00 AM to 1:00 PM PDT","9:00 AM to 1:00 PM PDT","9:00 AM to 1:00 PM PDT"]},
+    {csa:"Ericka Meged", client:"PayDiverse, LLC.", setup:"Full time", days:["7:00 AM to 4:00 PM PDT","7:00 AM to 4:00 PM PDT","7:00 AM to 4:00 PM PDT","7:00 AM to 4:00 PM PDT","7:00 AM to 4:00 PM PDT"]},
+    {csa:"Jerickson Fugaban", client:"Western Optical Supply Inc", setup:"Part time", days:["8:00 AM to 12:00 PM PDT","8:00 AM to 12:00 PM PDT","8:00 AM to 12:00 PM PDT","8:00 AM to 12:00 PM PDT","8:00 AM to 12:00 PM PDT"]},
+    {csa:"Kean Sanidad", client:"Khader Law", setup:"Part time", days:["6:00 AM to 10:00 AM PDT","9:00 AM to 1:00 PM PDT","6:00 AM to 10:00 AM PDT","9:00 AM to 1:00 PM PDT","6:00 AM to 10:00 AM PDT"]},
+    {csa:"Kean Sanidad", client:"Tactical & Rescue Gear, Ltd.", setup:"Part time", days:["11:00 AM to 3:00 PM PDT","11:00 AM to 3:00 PM PDT","11:00 AM to 3:00 PM PDT","11:00 AM to 3:00 PM PDT","11:00 AM to 3:00 PM PDT"]},
+    {csa:"Lou Angus", client:"The Little Lighthouse Foundation", setup:"Part time", days:["8:00 AM to 12:00 PM PDT","8:00 AM to 12:00 PM PDT","8:00 AM to 12:00 PM PDT","8:00 AM to 12:00 PM PDT","8:00 AM to 12:00 PM PDT"]},
+    {csa:"Rose Ann Bocado", client:"Dornerland Bookkeeping", setup:"Part time", days:["7:30 AM to 11:30 AM PDT","7:30 AM to 11:30 AM PDT","7:30 AM to 11:30 AM PDT","7:30 AM to 11:30 AM PDT","7:30 AM to 11:30 AM PDT"]},
+    {csa:"Rose Ann Bocado", client:"Diamond Mind", setup:"Part time", days:["12:00 PM to 4:00 PM PDT","12:00 PM to 4:00 PM PDT","12:00 PM to 4:00 PM PDT","12:00 PM to 4:00 PM PDT","12:00 PM to 4:00 PM PDT"]},
+    {csa:"Floricel Villanueva", client:"Knowbility", setup:"Full time", days:["7:30 AM to 4:00 PM PDT","7:30 AM to 4:00 PM PDT","7:30 AM to 4:00 PM PDT","7:30 AM to 4:00 PM PDT","7:30 AM to 4:00 PM PDT"]}
+  ];
+  var DAYNAMES=["Mon","Tue","Wed","Thu","Fri"];
+
+  var CATS={
+    platform:{label:"Platform / MAVIS Won't Start",owner:"Platform On-Call (Tech Infra)",severity:3,subs:["MAVIS won't start","Worker restart needed","Claude exited null","Infinite loading","Analysis stuck","Workflow frozen","Agent stopped unexpectedly","Cannot rerun task","Other platform issue"]},
+    aioutput:{label:"AI Output Quality",owner:"Prompt Engineering Team",severity:2,subs:["Wrong output","Hallucination","Poor formatting","Prompt not following instructions","Incorrect analysis","Missing data","AI skipped steps","Other output issue"]},
+    prompts:{label:"Prompts / Recipes",owner:"Prompt Engineering Team",severity:2,subs:["Prompt not working","Recipe error","Inconsistent results","Need a new prompt or recipe","Other prompt issue"]},
+    integrations:{label:"Integrations",owner:"Integrations Team",severity:3,subs:["Service not connected","Login expired (needs reconnect)","Data not syncing","Wrong account or data pulled","Missing permissions or scopes","Other integration issue"]},
+    access:{label:"Login / Access",owner:"IT / Access Admin",severity:3,subs:["Cannot log in","Password or 2FA issue","Access denied to client or workspace","Session keeps expiring","Other access issue"]},
+    clienttask:{label:"Client Task Issues",owner:"CSA Tech Team Lead",severity:3,subs:["Task stuck or won't complete","Wrong client data used","Task assigned incorrectly","Deliverable missing","Other client task issue"]},
+    dashboard:{label:"Dashboard / UI Bugs",owner:"Dashboard / Product Team",severity:2,subs:["Page won't load","Button or link broken","Display or layout glitch","Data not showing","Other UI bug"]},
+    kb:{label:"Knowledge Base Question",owner:"Knowledge Base Team",severity:1,subs:["How do I do something","Where do I find something","Best practice question","Other question"]},
+    feature:{label:"Feature Request",owner:"Product Team",severity:1,subs:["New feature idea","Enhancement to an existing feature","Automation request","Other request"]},
+    exceed:{label:"Exceed / Escalation",owner:"CSA Director (Escalation)",severity:2,subs:["Out of scope request","Needs manager approval","Urgent escalation","Other escalation"]}
+  };
+  var IMPACTS=[
+    {id:"block_client",title:"Client work is blocked",desc:"A client deliverable cannot move forward.",w:4},
+    {id:"block_self",title:"I can't continue working",desc:"I am fully stuck and cannot do my tasks.",w:3},
+    {id:"workaround",title:"I have a workaround",desc:"Annoying, but I can keep going for now.",w:2},
+    {id:"question",title:"General question",desc:"Not blocking. I just need info or guidance.",w:1}
+  ];
+  var TS=["Reran the task","Refreshed the page","Restarted MAVIS","Checked the Knowledge Hub","Reconnected the integration","Logged out and back in","Tried a different browser","Waited and retried","Cleared cache","Nothing yet"];
+
+  /* Suggested titles per category (short summaries). Shown as a datalist dropdown;
+     the CSA can still type any free-text title if nothing matches. */
+  var TITLE_SUGGESTIONS={
+    platform:["MAVIS won't start","MAVIS stuck on infinite loading","Analysis stuck / not progressing","Workflow frozen mid-run","Agent stopped unexpectedly","Claude exited null","Worker needs a restart","Cannot rerun a task"],
+    aioutput:["Wrong output from MAVIS","MAVIS made up information (hallucination)","Output formatting is messy","MAVIS did not follow instructions","Incorrect analysis","Data missing from the output","MAVIS skipped steps"],
+    prompts:["Prompt not working as expected","Recipe returns an error","Same prompt gives inconsistent results","Need a new prompt or recipe"],
+    integrations:["App shows as not connected","Connection / login expired","Data not syncing","Wrong account or data pulled","Missing permissions or scopes"],
+    access:["Cannot log in","Password or 2FA issue","Access denied to a client or workspace","Session keeps expiring"],
+    clienttask:["Client task stuck or won't complete","Wrong client data used","Task assigned incorrectly","Deliverable is missing"],
+    dashboard:["Page won't load","Button or link not working","Display or layout looks broken","Data not showing on the dashboard"],
+    kb:["How do I ... (question)","Where do I find ... (question)","Best practice question"],
+    feature:["New feature idea","Enhancement to an existing feature","Automation request"],
+    exceed:["Out of scope request","Needs manager approval","Urgent escalation"]
+  };
+  /* One plain-English quick-fix guide per ticket category. Simple steps only
+     (wait, refresh, relaunch, rerun, a short reprompt) so a CSA can self-serve
+     before filing. Each guide ends with when to submit the ticket. */
+  var GUIDES={
+    platform:{ title:"MAVIS is stuck, frozen, or won't start", teaser:"Quick reset steps: wait, refresh, relaunch, rerun.",
+      steps:["Wait about 30 seconds. A busy MAVIS can look frozen while it finishes.",
+        "Refresh the page (press F5, or Cmd/Ctrl + R).",
+        "If it still hangs, close the MAVIS tab and open it again (relaunch).",
+        "Start the task again (rerun). Most one-time glitches clear on a rerun.",
+        "Still stuck after a relaunch and one rerun? Submit this ticket with a screenshot."] },
+    aioutput:{ title:"MAVIS gave a wrong, messy, or incomplete answer", teaser:"Rerun once, then give a short, clear correction.",
+      steps:["Rerun the same task once. Output can change a little run to run.",
+        "Reply with a short correction, e.g. \"This part is wrong because X. Redo it and only fix X.\"",
+        "Ask for the format you want, e.g. \"Put this in a bullet list\" or \"Keep it under 5 sentences.\"",
+        "If something is missing, tell MAVIS exactly what is missing and where to find it.",
+        "Still off after a clean rerun and a clear reprompt? Submit this ticket and paste the answer you got."] },
+    prompts:{ title:"A prompt or recipe is not working right", teaser:"Rerun, then simplify the request into one clear step.",
+      steps:["Run it once more. A single hiccup often clears on a rerun.",
+        "Simplify your request into one clear instruction and try again.",
+        "Give one example of what a good result looks like.",
+        "Break a big ask into two smaller steps.",
+        "Still not working? Submit this ticket with the prompt you used."] },
+    integrations:{ title:"A connected app is not working", teaser:"Refresh, check the Integrations page, reconnect if needed.",
+      steps:["Refresh the page and try the task once more.",
+        "Open the Integrations page and check if the app shows as Connected.",
+        "If it says expired or disconnected, reconnect it from the Integrations page.",
+        "If you have more than one account for that app, make sure the right one is selected.",
+        "Still failing after reconnecting? Submit this ticket and note which app. Never share passwords or keys here."] },
+    access:{ title:"Login or access trouble", teaser:"Refresh, log out and back in, then try a private window.",
+      steps:["Refresh the page, then try to log in again.",
+        "Log out fully and log back in.",
+        "Open a private or incognito window and try once.",
+        "Use the \"Forgot password\" link if the password is the problem.",
+        "Still locked out? Submit this ticket. Never type your password or codes here."] },
+    clienttask:{ title:"A client task is stuck or looks wrong", teaser:"Confirm the client, refresh, rerun, check the review queue.",
+      steps:["Refresh the page and open the task again.",
+        "Confirm you are on the correct client and the correct task.",
+        "Rerun the task once.",
+        "Check the review queue in case the result is waiting there.",
+        "Still wrong or missing? Submit this ticket with the task name."] },
+    dashboard:{ title:"A page or dashboard is not showing right", teaser:"Refresh, hard refresh, relaunch, try another browser.",
+      steps:["Refresh the page (F5 or Cmd/Ctrl + R).",
+        "Hard refresh to clear the cache (Cmd + Shift + R on Mac, Ctrl + Shift + R on Windows).",
+        "Close the tab and open the page again (relaunch).",
+        "Try a different browser or a private window.",
+        "Still broken? Submit this ticket with a screenshot."] },
+    kb:{ title:"How to find answers fast", teaser:"Search the hub, browse the Playbook, or just ask MAVIS.",
+      steps:["Use the search bar at the top of the Knowledge Hub.",
+        "Browse the CSA Playbook for step-by-step guides.",
+        "Check the Communication Academy for client-facing scripts.",
+        "Ask MAVIS your question directly, in plain words.",
+        "Still no answer? Submit this ticket with your question."] },
+    feature:{ title:"Requesting a new feature or improvement", teaser:"Describe what you want and why, in a sentence or two.",
+      steps:["Describe what you want to do and why, in one or two sentences.",
+        "Note how you do it today and what is slow or annoying.",
+        "Add an example if you have one.",
+        "Submit this ticket. Feature requests are reviewed by the product team."] },
+    exceed:{ title:"Escalating something out of scope", teaser:"State the ask, the deadline, and what is blocked.",
+      steps:["Write what you need and the deadline, in one or two sentences.",
+        "Note who asked and why it is outside normal scope.",
+        "Flag if it is urgent and what is blocked right now.",
+        "Submit this ticket. It routes to the CSA Director."] }
+  };
+  var SLA={
+    P1:{label:"Critical",cls:"tkp1",respMin:60,resolveHrs:4,resolveLabel:"4 hours"},
+    P2:{label:"High",cls:"tkp2",respMin:240,resolveHrs:24,resolveLabel:"1 business day"},
+    P3:{label:"Medium",cls:"tkp3",respMin:1440,resolveHrs:72,resolveLabel:"3 business days"},
+    P4:{label:"Low",cls:"tkp4",respMin:2880,resolveHrs:120,resolveLabel:"5 business days"}
+  };
+  var STATUSES=["New","In Progress","Waiting for CSA","Resolved","Closed"];
+
+  /* ---------- helpers ---------- */
+  function g(id){return document.getElementById(id);}
+  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function uniqueCSAs(){var s=[];ASSIGNMENTS.forEach(function(a){if(s.indexOf(a.csa)<0)s.push(a.csa);});s.sort();return s;}
+  function clientsFor(c){return ASSIGNMENTS.filter(function(a){return a.csa===c;});}
+  function findAssign(c,cl){return ASSIGNMENTS.filter(function(a){return a.csa===c&&a.client===cl;})[0]||null;}
+  function pad(n){return (n<10?"0":"")+n;}
+  function computePriority(catKey,impactId){
+    if(!catKey||!impactId)return null;
+    var sev=CATS[catKey]?CATS[catKey].severity:2;
+    var imp=IMPACTS.filter(function(i){return i.id===impactId;})[0];
+    var w=imp?imp.w:2;
+    if(impactId==="question")return "P4";
+    if(catKey==="kb"||catKey==="feature")return (sev+w)>=5?"P3":"P4";
+    var score=sev+w;
+    if(score>=6)return "P1"; if(score===5)return "P2"; if(score===4)return "P3"; return "P4";
+  }
+  function humanMins(m){ if(m<60)return m+" minutes"; if(m<1440){var h=m/60;return h+" hour"+(h>1?"s":"");} var d=m/1440;return d+" business day"+(d>1?"s":""); }
+  function schedHTML(a){
+    var allSame=a.days.every(function(d){return d===a.days[0];});
+    var badge=a.setup.toLowerCase().indexOf("full")>=0?'<span class="tkbadge ft">Full time</span>':'<span class="tkbadge pt">Part time</span>';
+    var line;
+    var head;
+    if(allSame){ head=esc(a.days[0]); line="Mon to Fri. Sat and Sun are rest days."; }
+    else{ head="Varies by day"; line=a.days.map(function(d,i){return DAYNAMES[i]+" "+esc(d.replace(" PDT",""));}).join(" &middot; ")+" PDT. Sat and Sun are rest days."; }
+    return badge+'<b>'+head+'</b><div class="tksched">'+line+'</div>';
+  }
+  function fmtDate(d){
+    var days=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    var h=d.getHours(),ap=h>=12?"PM":"AM";h=h%12;if(h===0)h=12;
+    return days[d.getDay()]+", "+mo[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear()+" "+h+":"+pad(d.getMinutes())+" "+ap;
+  }
+  function genId(d){ return "CSA-"+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"-"+Math.floor(1000+Math.random()*9000); }
+
+  /* ---------- form template ---------- */
+  function formHTML(){
+    var csaOpts='<option value="">Select your name</option>'+uniqueCSAs().map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join('');
+    var catOpts='<option value="">Select a category</option>'+Object.keys(CATS).map(function(k){return '<option value="'+k+'">'+esc(CATS[k].label)+'</option>';}).join('');
+    var impHTML=IMPACTS.map(function(im){return '<label data-id="'+im.id+'"><input type="radio" name="tkimpact" value="'+im.id+'"><div><b>'+esc(im.title)+'</b><span>'+esc(im.desc)+'</span></div></label>';}).join('');
+    var tsHTML=TS.map(function(t,i){return '<label><input type="checkbox" value="'+esc(t)+'" id="tkts'+i+'"><span>'+esc(t)+'</span></label>';}).join('');
+    return ''+
+    '<div class="tksec"><h4>Who is submitting</h4><p class="sub">Pick your name, then your client. Your schedule fills in on its own.</p>'+
+      '<div class="tkgrid">'+
+        '<div class="tkf"><label>CSA Name <span class="rq">*</span></label><select id="tkCsa">'+csaOpts+'</select><div class="tkerr" id="tke-csa">Please select your name.</div></div>'+
+        '<div class="tkf"><label>Client <span class="rq">*</span></label><select id="tkClient" disabled><option value="">Select a CSA first</option></select><div class="tkerr" id="tke-client">Please select a client.</div></div>'+
+      '</div>'+
+      '<div class="tkf"><label>Schedule <span class="tktag">auto, read-only</span></label><div class="tkread" id="tkSched">Select a client to load the schedule.</div></div>'+
+    '</div>'+
+    '<div class="tksec"><h4>What is the issue</h4><p class="sub">Pick the category first, then choose a title. The category routes the ticket to the right team.</p>'+
+      '<div class="tkgrid">'+
+        '<div class="tkf"><label>Category <span class="rq">*</span></label><select id="tkCat">'+catOpts+'</select><div class="tkerr" id="tke-cat">Please select a category.</div></div>'+
+        '<div class="tkf"><label>Subcategory <span class="rq">*</span></label><select id="tkSub" disabled><option value="">Select a category first</option></select><div class="tkerr" id="tke-sub">Please select a subcategory.</div></div>'+
+      '</div>'+
+      '<div class="tkf"><label>Request Title <span class="rq">*</span></label>'+
+        '<select id="tkTitleSel" disabled><option value="">Select a category first</option></select>'+
+        '<input type="text" id="tkTitleOther" maxlength="120" placeholder="Type your own title" autocomplete="off" style="display:none;margin-top:8px">'+
+        '<p class="tkhint">Choose a suggested title, or pick "Other" to type your own.</p>'+
+        '<div class="tkerr" id="tke-title">Please choose or enter a title.</div></div>'+
+    '</div>'+
+    '<div class="tksec" id="tkKbCard" style="display:none"><h4>Before you submit, this may help</h4><p class="sub">Many issues are already solved in the Knowledge Hub. A quick look may save you the wait.</p>'+
+      '<div class="tkkb" id="tkKbList"></div><label class="tkack"><input type="checkbox" id="tkKbAck"> I checked these and still need help.</label></div>'+
+    '<div class="tksec"><h4>Details</h4><p class="sub">The more specific you are, the faster we can help.</p>'+
+      '<div class="tkf"><label>Description <span class="rq">*</span></label><textarea id="tkDesc" placeholder="What happened:&#10;&#10;What you expected:&#10;&#10;What actually happened:&#10;&#10;Any error messages you saw:"></textarea><p class="tkhint">Tip: cover what happened, what you expected, and what actually happened.</p><div class="tkerr" id="tke-desc">Please describe the issue.</div></div>'+
+      '<div class="tkgrid">'+
+        '<div class="tkf"><label>Error Message <span class="tktag">optional</span></label><input type="text" id="tkErr" placeholder="Paste the exact error text if you have one"></div>'+
+        '<div class="tkf"><label>Issue Start Time <span class="rq">*</span></label><select id="tkStart"><option value="">When did it start</option><option>Just now</option><option>Less than 30 mins ago</option><option>About 1 hour ago</option><option>Today</option><option>Yesterday</option><option>Earlier</option></select><div class="tkerr" id="tke-start">Please pick when it started.</div></div>'+
+      '</div>'+
+      '<div class="tkf"><label>Screenshot <span class="tktag">optional</span></label><div class="tkdrop" id="tkDrop">Click to attach a screenshot (PNG or JPG)</div><input type="file" id="tkFile" accept="image/*" style="display:none"><div class="tkhint" id="tkFileName"></div><img id="tkThumb" class="tkthumb" style="display:none" alt="preview"></div>'+
+    '</div>'+
+    '<div class="tksec"><h4>Troubleshooting already tried</h4><p class="sub">Check anything you already did so we can skip the basics.</p><div class="tkchecks">'+tsHTML+'</div></div>'+
+    '<div class="tksec"><h4>Impact <span class="rq">*</span></h4><p class="sub">Tell us how this affects your work. We set the priority for you based on this and the category. Priority cannot be chosen manually.</p>'+
+      '<div class="tkimp" id="tkImp">'+impHTML+'</div><div class="tkerr" id="tke-impact">Please select the impact.</div>'+
+      '<div style="height:14px"></div>'+
+      '<div class="tkauto">'+
+        '<div class="tkrow"><span class="k">Assigned priority</span><span class="v" id="tkPvPrio"><span class="tkpill tkp4">Pending</span></span></div>'+
+        '<div class="tkrow"><span class="k">Routed to</span><span class="v" id="tkPvOwner">Select category and impact</span></div>'+
+        '<div class="tkrow"><span class="k">Target first response</span><span class="v" id="tkPvResp">Not set</span></div>'+
+        '<div class="tkrow"><span class="k">Target resolution</span><span class="v" id="tkPvResolve">Not set</span></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="tksec" style="text-align:center"><div class="tkactions"><button type="button" class="tkbtn primary" id="tkSubmit">Submit Ticket</button><button type="button" class="tkbtn ghost" id="tkReset">Clear Form</button></div>'+
+      '<p class="tkhint" style="margin-top:12px">A Ticket ID and timestamp are generated on submit.</p></div>';
+  }
+  function successHTML(){
+    return '<div class="tksec">'+
+      '<div class="tktick">&#10003;</div>'+
+      '<h4 style="text-align:center;font-size:16px">Ticket submitted</h4>'+
+      '<div class="tkidbig" id="tkOkId">CSA-00000000-0000</div>'+
+      '<div class="tkauto">'+
+        '<div class="tkrow"><span class="k">Submitted</span><span class="v" id="tkOkTime">Not set</span></div>'+
+        '<div class="tkrow"><span class="k">CSA / Client</span><span class="v" id="tkOkWho">Not set</span></div>'+
+        '<div class="tkrow"><span class="k">Title</span><span class="v" id="tkOkTitle">Not set</span></div>'+
+        '<div class="tkrow"><span class="k">Schedule</span><span class="v" id="tkOkSched">Not set</span></div>'+
+        '<div class="tkrow"><span class="k">Category</span><span class="v" id="tkOkCat">Not set</span></div>'+
+        '<div class="tkrow"><span class="k">Priority</span><span class="v" id="tkOkPrio">Not set</span></div>'+
+        '<div class="tkrow"><span class="k">Routed to</span><span class="v" id="tkOkOwner">Not set</span></div>'+
+      '</div>'+
+      '<div style="margin-top:14px"><label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Status</label><div class="tkstep" id="tkOkStep"></div></div>'+
+      '<div style="margin-top:14px"><label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">SLA timer</label><div class="tksla"><div class="box live"><div class="lab">First response due in</div><div class="big" id="tkOkCountdown">Not set</div></div><div class="box"><div class="lab">Resolution target</div><div class="big" id="tkOkResolveBy">Not set</div></div></div></div>'+
+      '<div class="tkactions" style="margin-top:20px"><button type="button" class="tkbtn primary" id="tkNew">Submit Another Ticket</button></div>'+
+    '</div>';
+  }
+
+  /* ---------- state + wiring ---------- */
+  var state={csa:"",client:"",assign:null,cat:"",sub:"",impact:""};
+  var countdownTimer=null;
+  var screenshotData=null;
+  /* Paste the deployed Google Apps Script Web App URL here to log every ticket to
+     the "CSA Tech - Ticket Log" sheet. Blank just skips logging (form still works). */
+  var TICKET_LOG_URL="https://script.google.com/macros/s/AKfycbyMTDZcYM2mXCDEbXSA6n6Uy_Q1RKefnp3hZ3wG9dx35AZcyLd7ws9X9Wt51vcHJHM/exec";
+  function logTicket(payload){
+    if(!TICKET_LOG_URL)return;
+    try{ fetch(TICKET_LOG_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)}); }catch(e){}
+  }
+
+  function setSched(a){ g("tkSched").innerHTML = a? schedHTML(a) : "Select a client to load the schedule."; }
+  function showErr(id){var e=g("tke-"+id);if(e)e.classList.add("show");}
+  function clearErr(id){var e=g("tke-"+id);if(e)e.classList.remove("show");}
+
+  function fillTitleOptions(catKey){
+    var sel=g("tkTitleSel"), oth=g("tkTitleOther"); if(!sel)return;
+    if(oth){ oth.style.display="none"; oth.value=""; }
+    var list=TITLE_SUGGESTIONS[catKey]||[];
+    if(!catKey||!list.length){ sel.disabled=true; sel.innerHTML='<option value="">Select a category first</option>'; return; }
+    sel.disabled=false;
+    sel.innerHTML='<option value="">Select a title</option>'+
+      list.map(function(t){return '<option value="'+esc(t)+'">'+esc(t)+'</option>';}).join("")+
+      '<option value="__other__">Other (type my own)</option>';
+  }
+  function getTitle(){
+    var sel=g("tkTitleSel"), oth=g("tkTitleOther"); if(!sel)return "";
+    if(sel.value==="__other__") return oth?oth.value.trim():"";
+    return sel.value||"";
+  }
+  function renderKB(catKey){
+    var gd=GUIDES[catKey], box=g("tkKbList"); box.innerHTML="";
+    if(gd){
+      var d=document.createElement("div"); d.className="item"; d.setAttribute("role","button"); d.tabIndex=0;
+      d.innerHTML='<span class="dot"></span><div><span class="tklink">'+esc(gd.title)+'</span><p>'+esc(gd.teaser)+'</p></div>';
+      d.addEventListener("click",function(){ openArticle(catKey); });
+      d.addEventListener("keydown",function(ev){ if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); openArticle(catKey); } });
+      box.appendChild(d);
+    }
+    g("tkKbAck").checked=false;
+    g("tkKbCard").style.display=gd?"block":"none";
+  }
+  function openArticle(catKey){
+    var gd=GUIDES[catKey], rd=g("tkReader"); if(!rd||!gd)return;
+    var steps=gd.steps.map(function(s){return '<li>'+esc(s)+'</li>';}).join("");
+    var body='<span class="tkbadge pt" style="background:rgba(6,182,212,.16);color:var(--cyan)">Quick fix</span>'+
+      '<div class="tkgTitle">'+esc(gd.title)+'</div>'+
+      '<p class="tkgIntro">Try these simple steps first. They fix most cases in a minute or two.</p>'+
+      '<ol class="tkgSteps">'+steps+'</ol>'+
+      '<div class="tkgFoot">If these do not fix it, add your details above and submit the ticket. It will route to the right team automatically.</div>';
+    rd.innerHTML='<div class="tkreaderhd"><button type="button" class="tkbtn ghost" id="tkArtBack">&larr; Back to ticket</button><span class="tkreadertag">Quick fix guide</span></div><div class="tkreaderbody">'+body+'</div>';
+    rd.classList.add("open");
+    g("tkArtBack").addEventListener("click",function(){ rd.classList.remove("open"); rd.innerHTML=""; });
+    rd.scrollTop=0;
+  }
+  function updatePreview(){
+    var prio=computePriority(state.cat,state.impact);
+    var pv=g("tkPvPrio"),ow=g("tkPvOwner"),rr=g("tkPvResp"),rs=g("tkPvResolve");
+    if(!pv)return;
+    if(!prio){ pv.innerHTML='<span class="tkpill tkp4">Pending</span>'; ow.textContent=state.cat?CATS[state.cat].owner:"Select category and impact"; rr.innerHTML="Not set"; rs.innerHTML="Not set"; return; }
+    var s=SLA[prio];
+    pv.innerHTML='<span class="tkpill '+s.cls+'">'+prio+' '+s.label+'</span>';
+    ow.textContent=CATS[state.cat].owner; rr.textContent=humanMins(s.respMin); rs.textContent=s.resolveLabel;
+  }
+
+  function wireForm(){
+    g("tkCsa").addEventListener("change",function(){
+      state.csa=this.value; state.client=""; state.assign=null;
+      var cl=g("tkClient"); cl.innerHTML="";
+      if(!state.csa){cl.disabled=true;cl.innerHTML='<option value="">Select a CSA first</option>';setSched(null);return;}
+      var list=clientsFor(state.csa); cl.disabled=false;
+      if(list.length===1){
+        cl.innerHTML='<option value="'+esc(list[0].client)+'">'+esc(list[0].client)+'</option>';
+        cl.value=list[0].client; state.client=list[0].client; state.assign=list[0]; setSched(list[0]);
+      }else{
+        cl.innerHTML='<option value="">Select your client</option>'+list.map(function(a){return '<option value="'+esc(a.client)+'">'+esc(a.client)+'</option>';}).join('');
+        setSched(null);
+      }
+      clearErr("csa");
+    });
+    g("tkClient").addEventListener("change",function(){ state.client=this.value; state.assign=findAssign(state.csa,state.client); setSched(state.assign); clearErr("client"); });
+    g("tkCat").addEventListener("change",function(){
+      state.cat=this.value; var sub=g("tkSub"); sub.innerHTML="";
+      if(!state.cat){sub.disabled=true;sub.innerHTML='<option value="">Select a category first</option>';g("tkKbCard").style.display="none";state.sub="";fillTitleOptions("");clearErr("title");updatePreview();return;}
+      sub.disabled=false;
+      sub.innerHTML='<option value="">Select a subcategory</option>'+CATS[state.cat].subs.map(function(s){return '<option value="'+esc(s)+'">'+esc(s)+'</option>';}).join('');
+      state.sub=""; renderKB(state.cat); fillTitleOptions(state.cat); clearErr("title"); updatePreview(); clearErr("cat");
+    });
+    g("tkTitleSel").addEventListener("change",function(){
+      var oth=g("tkTitleOther");
+      if(this.value==="__other__"){ if(oth){ oth.style.display="block"; oth.focus(); } }
+      else if(oth){ oth.style.display="none"; oth.value=""; }
+      clearErr("title");
+    });
+    g("tkTitleOther").addEventListener("input",function(){ clearErr("title"); });
+    g("tkSub").addEventListener("change",function(){state.sub=this.value;clearErr("sub");});
+    Array.prototype.forEach.call(document.querySelectorAll('#tkImp input[name=tkimpact]'),function(r){
+      r.addEventListener("change",function(){
+        state.impact=this.value;
+        Array.prototype.forEach.call(document.querySelectorAll('#tkImp label'),function(l){l.classList.remove('sel');});
+        var p=this.parentNode; while(p&&p.tagName!=='LABEL')p=p.parentNode; if(p)p.classList.add('sel');
+        updatePreview(); clearErr("impact");
+      });
+    });
+    g("tkDrop").addEventListener("click",function(){g("tkFile").click();});
+    g("tkFile").addEventListener("change",function(){
+      var f=this.files[0]; if(!f){screenshotData=null;return;}
+      g("tkFileName").textContent="Attached: "+f.name;
+      var rd=new FileReader(); rd.onload=function(e){var t=g("tkThumb");t.src=e.target.result;t.style.display="block"; screenshotData={b64:e.target.result,name:f.name,type:f.type||"image/png"};}; rd.readAsDataURL(f);
+    });
+    g("tkSubmit").addEventListener("click",onSubmit);
+    g("tkReset").addEventListener("click",resetForm);
+  }
+
+  function resetForm(){
+    var rd=g("tkReader"); if(rd){ rd.classList.remove("open"); rd.innerHTML=""; }
+    g("tkBody").innerHTML=formHTML(); state={csa:"",client:"",assign:null,cat:"",sub:"",impact:""}; screenshotData=null; wireForm(); updatePreview();
+  }
+
+  function onSubmit(){
+    var ok=true;
+    if(!state.csa){showErr("csa");ok=false;}
+    if(!state.client){showErr("client");ok=false;}
+    if(!getTitle()){showErr("title");ok=false;}
+    if(!state.cat){showErr("cat");ok=false;}
+    if(!state.sub){showErr("sub");ok=false;}
+    if(!g("tkDesc").value.trim()){showErr("desc");ok=false;}
+    if(!g("tkStart").value){showErr("start");ok=false;}
+    if(!state.impact){showErr("impact");ok=false;}
+    if(!ok){ var fe=document.querySelector('.tkerr.show'); if(fe)fe.scrollIntoView({behavior:"smooth",block:"center"}); return; }
+
+    var titleVal=getTitle();
+    var now=new Date(), prio=computePriority(state.cat,state.impact), s=SLA[prio], id=genId(now);
+    var respBy=new Date(now.getTime()+s.respMin*60000), resolveBy=new Date(now.getTime()+s.resolveHrs*3600000);
+
+    var impTitle=(IMPACTS.filter(function(i){return i.id===state.impact;})[0]||{}).title||state.impact;
+    var tried=Array.prototype.slice.call(document.querySelectorAll("input[id^='tkts']:checked")).map(function(x){return x.value;}).join(", ");
+    var payload={ticketId:id,submittedAt:fmtDate(now),csa:state.csa,client:state.client,schedule:(state.assign?state.assign.setup:""),category:CATS[state.cat].label,subcategory:state.sub,title:titleVal,description:g("tkDesc").value,issueStarted:g("tkStart").value,impact:impTitle,priority:prio+" "+s.label,owner:CATS[state.cat].owner,status:"New",firstResponseDue:fmtDate(respBy),resolutionDue:fmtDate(resolveBy),errorMessage:g("tkErr").value,troubleshooting:tried};
+    if(screenshotData){ payload.screenshotBase64=screenshotData.b64; payload.screenshotName=screenshotData.name; payload.screenshotType=screenshotData.type; }
+    logTicket(payload);
+
+    g("tkBody").innerHTML=successHTML();
+    g("tkOkId").textContent=id;
+    g("tkOkTime").textContent=fmtDate(now);
+    g("tkOkWho").textContent=state.csa+" / "+state.client;
+    g("tkOkTitle").textContent=titleVal;
+    g("tkOkSched").textContent=state.assign?state.assign.setup:"Not set";
+    g("tkOkCat").textContent=CATS[state.cat].label+" · "+state.sub;
+    g("tkOkPrio").innerHTML='<span class="tkpill '+s.cls+'">'+prio+' '+s.label+'</span>';
+    g("tkOkOwner").textContent=CATS[state.cat].owner;
+    var st=g("tkOkStep"); st.innerHTML=STATUSES.map(function(x,i){return '<div class="s'+(i===0?' on':'')+'">'+esc(x)+'</div>';}).join('');
+    g("tkOkResolveBy").textContent=fmtDate(resolveBy);
+
+    if(countdownTimer)clearInterval(countdownTimer);
+    function tick(){
+      var diff=respBy.getTime()-Date.now(), out=g("tkOkCountdown"); if(!out){clearInterval(countdownTimer);return;}
+      if(diff<=0){out.textContent="Response due now";clearInterval(countdownTimer);return;}
+      var hrs=Math.floor(diff/3600000), mins=Math.floor((diff%3600000)/60000), secs=Math.floor((diff%60000)/1000);
+      out.textContent=(hrs>0?hrs+"h ":"")+pad(mins)+"m "+pad(secs)+"s";
+    }
+    tick(); countdownTimer=setInterval(tick,1000);
+    g("tkNew").addEventListener("click",resetForm);
+    g("tkBody").scrollTop=0;
+  }
+
+  /* ---------- open / close ---------- */
+  function openTicket(){ resetForm(); var bg=g("tkBg"),p=g("tkPanel"); bg.classList.add("open"); p.classList.add("open"); p.setAttribute("aria-hidden","false"); document.body.style.overflow="hidden"; }
+  function closeTicket(){ var bg=g("tkBg"),p=g("tkPanel"),rd=g("tkReader"); bg.classList.remove("open"); p.classList.remove("open"); p.setAttribute("aria-hidden","true"); if(rd){rd.classList.remove("open");rd.innerHTML="";} document.body.style.overflow=""; if(countdownTimer)clearInterval(countdownTimer); }
+  g("tkBg").addEventListener("click",closeTicket);
+  g("tkClose").addEventListener("click",closeTicket);
+  document.addEventListener("keydown",function(e){ if(e.key!=="Escape")return; var rd=g("tkReader"); if(rd&&rd.classList.contains("open")){ rd.classList.remove("open"); rd.innerHTML=""; return; } if(g("tkPanel").classList.contains("open"))closeTicket(); });
+
+  /* rewire the existing "Ask CSA Tech" button to open the ticket form (Ask Blanche stays as chat) */
+  function rewire(){ var b=g("askCsaBtn"); if(b){ b.onclick=function(ev){ if(ev)ev.preventDefault(); openTicket(); }; } }
+  rewire();
+  setTimeout(rewire,0);
+  window.openCsaTicket=openTicket;
+})();
+</script>
+
 </body>
 </html>
