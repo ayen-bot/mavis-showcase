@@ -1116,7 +1116,7 @@
   .kbBadge.kb-discovery,.kbBadge.kb-explain,.kbBadge.kb-upsell{color:var(--acc2);border-color:rgba(99,102,241,.4);background:rgba(99,102,241,.1)}
   .kbBadge.kb-updates{color:var(--acc);border-color:rgba(6,182,212,.4);background:rgba(6,182,212,.1)}
   .kbBadge.kb-difficult,.kbBadge.kb-conflict{color:var(--warn);border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.1)}
-.kb-sdp{color:var(--acc);border-color:rgba(6,182,212,.4);background:rgba(6,182,212,.1)}
+  .kbBadge.kb-sdp{color:var(--acc);border-color:rgba(6,182,212,.4);background:rgba(6,182,212,.1)}
   .kbBadge.kb-reliability{color:var(--acc2);border-color:rgba(99,102,241,.4);background:rgba(99,102,241,.1)}
   .kbBadge.kb-commitment{color:var(--warn);border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.1)}
   .kbBadge.kb-trust{color:var(--neg);border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.1)}
@@ -1168,6 +1168,45 @@
   .simDimBar .sb-good{background:linear-gradient(90deg,#10b981,#34d399)}
   .simDimBar .sb-mid{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
   .simDimBar .sb-low{background:linear-gradient(90deg,#f87171,#fca5a5)}
+  .simRounds{font-size:11px;font-weight:700;color:var(--muted);margin:2px 0 10px}
+  .simProg{margin-left:auto;font-size:11px;font-weight:800;letter-spacing:.4px;color:var(--acc);text-transform:uppercase}
+  .simCallHead{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(6,182,212,.1),transparent),var(--surface2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+  .simAvatar{width:44px;height:44px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;background:linear-gradient(135deg,var(--amber),#d97706);box-shadow:0 6px 18px rgba(245,158,11,.35)}
+  .simCallMeta{flex:1;min-width:0}
+  .simCallName{font-size:13.5px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .simCallSub{font-size:11px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .simLivePill{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--pos);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);border-radius:999px;padding:3px 9px;margin-bottom:4px}
+  .simLivePill .dot{width:6px;height:6px;border-radius:50%;background:var(--emerald);box-shadow:0 0 8px var(--emerald);animation:pulse 2s infinite}
+  .simTimer{font-size:13px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;font-family:ui-monospace,Menlo,monospace}
+  .simHang{flex:none;background:var(--rose);color:#fff;border:0;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+  .simThread{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+  .simMsg{position:relative;display:flex;gap:9px;align-items:flex-start;border:1px solid var(--line);border-radius:11px;padding:11px 13px}
+  .simMsg .simTag{flex:none;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+  .simMsg p{margin:0;font-size:13px;line-height:1.5}
+  .simMsg.client{border-left:3px solid var(--amber);background:rgba(245,158,11,.06)}
+  .simMsg.client .simTag{color:var(--warn)}
+  .simMsg.client p{color:var(--ink);font-style:italic;flex:1}
+  .simMsg.csa{border-left:3px solid var(--cyan);background:rgba(6,182,212,.06)}
+  .simMsg.csa .simTag{color:var(--acc)}
+  .simMsg.csa p{color:var(--ink2);flex:1}
+  .simMsg.client.live{box-shadow:0 0 0 3px rgba(245,158,11,.12)}
+  .simSpk{background:none;border:0;cursor:pointer;color:var(--acc2);font-size:13px;padding:0 4px;vertical-align:middle}
+  .simTurnChip{flex:none;align-self:center;min-width:26px;height:26px;padding:0 7px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff}
+  .simTurnChip.band-good{background:linear-gradient(135deg,#10b981,#059669)}
+  .simTurnChip.band-mid{background:linear-gradient(135deg,#f59e0b,#d97706)}
+  .simTurnChip.band-low{background:linear-gradient(135deg,#f87171,#ef4444)}
+  .simReactTag{display:inline-block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:2px 8px;border-radius:999px;vertical-align:middle}
+  .simReactTag.up{color:var(--pos);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3)}
+  .simReactTag.down{color:var(--neg);background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3)}
+  .simMicBtn{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 18px;font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer}
+  .simMicBtn:hover{border-color:var(--cyan)}
+  .simMicBtn.rec{background:rgba(239,68,68,.14);border-color:var(--rose);color:var(--neg);animation:pulse 1.4s infinite}
+  .simVoiceNote{font-size:11px;color:var(--muted);line-height:1.5}
+  .simVoiceBar{display:flex;align-items:center;gap:8px;margin:2px 0 10px;font-size:12px;color:var(--muted);font-weight:600;flex-wrap:wrap}
+  .simVoiceBar select{max-width:240px;padding:4px 8px;border-radius:8px;border:1px solid var(--line,#2a3550);background:var(--panel,#0e1626);color:var(--ink,#e7edf7);font-size:12px}
+  .simRounds2{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+  .simRoundRow{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink2);font-weight:700}
+  .simRoundWc{margin-left:auto;font-size:11px;color:var(--muted);font-weight:600}
   @media(max-width:760px){.indExecTop{flex-direction:column;text-align:center}.simDims{grid-template-columns:1fr}.acadModes{gap:6px}.acadMode{flex:1;text-align:center;padding:9px 8px;font-size:11.5px}}
   .prosGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:22px}
   .prosCard{background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:16px 17px;transition:.18s;position:relative;overflow:hidden;display:flex;flex-direction:column}
@@ -1810,6 +1849,11 @@ __APP_JS__
         '<div class="tkf"><label>Client <span class="rq">*</span></label><select id="tkClient" disabled><option value="">Select a CSA first</option></select><div class="tkerr" id="tke-client">Please select a client.</div></div>'+
       '</div>'+
       '<div class="tkf"><label>Schedule <span class="tktag">auto, read-only</span></label><div class="tkread" id="tkSched">Select a client to load the schedule.</div></div>'+
+      '<div class="tkf" style="margin-top:4px"><label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;margin:0"><input type="checkbox" id="tkManual" style="width:auto;margin:0"> Not a CSA? Escalate this ticket manually</label></div>'+
+      '<div id="tkManualWrap" style="display:none;margin-top:12px"><div class="tkgrid">'+
+        '<div class="tkf"><label>Your Name <span class="rq">*</span></label><input type="text" id="tkNameManual" placeholder="Type your name" autocomplete="off"><div class="tkerr" id="tke-namemanual">Please enter your name.</div></div>'+
+        '<div class="tkf"><label>Client Name <span class="rq">*</span></label><input type="text" id="tkClientManual" placeholder="Type the client name" autocomplete="off"><div class="tkerr" id="tke-clientmanual">Please enter the client name.</div></div>'+
+      '</div></div>'+
     '</div>'+
     '<div class="tksec"><h4>What is the issue</h4><p class="sub">Pick the category first, then choose a title. The category routes the ticket to the right team.</p>'+
       '<div class="tkgrid">'+
@@ -1865,7 +1909,7 @@ __APP_JS__
   }
 
   /* ---------- state + wiring ---------- */
-  var state={csa:"",client:"",assign:null,cat:"",sub:"",impact:""};
+  var state={csa:"",client:"",assign:null,cat:"",sub:"",impact:"",manual:false};
   var countdownTimer=null;
   var screenshotData=null;
   /* Paste the deployed Google Apps Script Web App URL here to log every ticket to
@@ -1949,6 +1993,16 @@ __APP_JS__
       clearErr("csa");
     });
     g("tkClient").addEventListener("change",function(){ state.client=this.value; state.assign=findAssign(state.csa,state.client); setSched(state.assign); clearErr("client"); });
+    var mchk=g("tkManual");
+    if(mchk){ mchk.addEventListener("change",function(){
+      state.manual=this.checked;
+      var wrap=g("tkManualWrap"); if(wrap) wrap.style.display=this.checked?"block":"none";
+      var cs=g("tkCsa"), cl2=g("tkClient");
+      if(this.checked){ if(cs)cs.disabled=true; if(cl2)cl2.disabled=true; setSched(null); clearErr("csa"); clearErr("client"); }
+      else { if(cs)cs.disabled=false; clearErr("namemanual"); clearErr("clientmanual"); }
+    }); }
+    var nmM=g("tkNameManual"); if(nmM) nmM.addEventListener("input",function(){ if(this.value.trim())clearErr("namemanual"); });
+    var clM=g("tkClientManual"); if(clM) clM.addEventListener("input",function(){ if(this.value.trim())clearErr("clientmanual"); });
     g("tkCat").addEventListener("change",function(){
       state.cat=this.value; var sub=g("tkSub"); sub.innerHTML="";
       if(!state.cat){sub.disabled=true;sub.innerHTML='<option value="">Select a category first</option>';g("tkKbCard").style.display="none";state.sub="";fillTitleOptions("");clearErr("title");updatePreview();return;}
@@ -1984,13 +2038,19 @@ __APP_JS__
 
   function resetForm(){
     var rd=g("tkReader"); if(rd){ rd.classList.remove("open"); rd.innerHTML=""; }
-    g("tkBody").innerHTML=formHTML(); state={csa:"",client:"",assign:null,cat:"",sub:"",impact:""}; screenshotData=null; wireForm(); updatePreview();
+    g("tkBody").innerHTML=formHTML(); state={csa:"",client:"",assign:null,cat:"",sub:"",impact:"",manual:false}; screenshotData=null; wireForm(); updatePreview();
   }
 
   function onSubmit(){
     var ok=true;
-    if(!state.csa){showErr("csa");ok=false;}
-    if(!state.client){showErr("client");ok=false;}
+    if(state.manual){
+      var _nm=(g("tkNameManual").value||"").trim(), _clm=(g("tkClientManual").value||"").trim();
+      if(!_nm){showErr("namemanual");ok=false;}
+      if(!_clm){showErr("clientmanual");ok=false;}
+    } else {
+      if(!state.csa){showErr("csa");ok=false;}
+      if(!state.client){showErr("client");ok=false;}
+    }
     if(!getTitle()){showErr("title");ok=false;}
     if(!state.cat){showErr("cat");ok=false;}
     if(!state.sub){showErr("sub");ok=false;}
@@ -2005,7 +2065,7 @@ __APP_JS__
 
     var impTitle=(IMPACTS.filter(function(i){return i.id===state.impact;})[0]||{}).title||state.impact;
     var tried=Array.prototype.slice.call(document.querySelectorAll("input[id^='tkts']:checked")).map(function(x){return x.value;}).join(", ");
-    var payload={ticketId:id,submittedAt:fmtDate(now),csa:state.csa,client:state.client,schedule:(state.assign?state.assign.setup:""),category:CATS[state.cat].label,subcategory:state.sub,title:titleVal,description:g("tkDesc").value,issueStarted:g("tkStart").value,impact:impTitle,priority:prio+" "+s.label,owner:"",status:"New",firstResponseDue:fmtDate(respBy),resolutionDue:fmtDate(resolveBy),errorMessage:g("tkErr").value,troubleshooting:tried};
+    var payload={ticketId:id,submittedAt:fmtDate(now),csa:(state.manual?(g("tkNameManual").value||"").trim():state.csa),client:(state.manual?(g("tkClientManual").value||"").trim():state.client),submittedBy:(state.manual?"Non-CSA (manual)":"CSA"),schedule:(state.assign?state.assign.setup:""),category:CATS[state.cat].label,subcategory:state.sub,title:titleVal,description:g("tkDesc").value,issueStarted:g("tkStart").value,impact:impTitle,priority:prio+" "+s.label,owner:"",status:"New",firstResponseDue:fmtDate(respBy),resolutionDue:fmtDate(resolveBy),errorMessage:g("tkErr").value,troubleshooting:tried};
     if(screenshotData){ payload.screenshotBase64=screenshotData.b64; payload.screenshotName=screenshotData.name; payload.screenshotType=screenshotData.type; }
     g("tkBody").innerHTML=successHTML();
     g("tkOkId").textContent="Assigning...";
