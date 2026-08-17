@@ -4122,10 +4122,10 @@ function lbRenderQuick(links){
   var sec=$('#lbQaSec'), g=$('#lbQa'); if(!g) return;
   if(sec) sec.style.display=qa.length?"":"none";
   g.innerHTML=qa.map(function(l){
-    return '<div class="lbQaCard" data-open="'+esc(l.url)+'"><div class="lbIco">'+lbIcon(l.type)+'</div>'+
+    return '<div class="lbQaCard" data-preview="'+esc(l.id)+'"><div class="lbIco">'+lbIcon(l.type)+'</div>'+
       '<div class="lbQaM"><div class="lbQaN">'+esc(l.name)+'</div><div class="lbQaT">'+esc(l.tool)+'</div></div></div>';
   }).join("");
-  g.querySelectorAll("[data-open]").forEach(function(c){ c.onclick=function(){ openExternal(c.getAttribute("data-open")); }; });
+  g.querySelectorAll("[data-preview]").forEach(function(c){ c.onclick=function(){ lbOpenPreview(c.getAttribute("data-preview")); }; });
 }
 function lbRenderTable(links){
   var all=lbSort(links.filter(lbMatch));
