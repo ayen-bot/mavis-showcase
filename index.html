@@ -1590,6 +1590,7 @@ const VIEWS = [
   ['deliverables','What MAVIS Can Do','✧'],
   ['tools','Tools','⚙'],
   ['csa','CSA (Client Systems Architect)','◈'],
+  ['links','Links Bank','🔗'],
   ['prospecting','Prospecting & Lead Gen','◎'],
   ['va','VA Toolkit','☰'],
   ['csatech','CSA Tech Manager','⚠'],
@@ -1600,6 +1601,7 @@ const recent = [];
 
 // ---------- page titles + hash routing (each view / CSA tab = an addressable page) ----------
 const PAGE_TITLES = {
+  links:'Links Bank',
   live:'Live MAVIS Analysis', sim:'MAVIS Simulator', deliverables:'What MAVIS Can Do',
   tools:'Tools', csa:'CSA', prospecting:'Prospecting & Lead Gen', va:'VA Toolkit',
   csatech:'CSA Tech Manager', apibanks:'API Banks', catalog:'Integration Library',
@@ -1982,13 +1984,14 @@ function render(){
   else if(state.view==='csa'){ v.innerHTML=viewCSA(); wireCSA(); }
   else if(state.view==='csatech'){ v.innerHTML=viewCSATech(); wireCSATech(); }
   else if(state.view==='apibanks'){ v.innerHTML=viewApiBanks(); wireApiBanks(); }
+  else if(state.view==='links'){ v.innerHTML=viewLinks(); wireLinks(); }
   else if(state.view==='prospecting'){ v.innerHTML=viewProspecting(); wireProspecting(); }
   else if(state.view==='va'){ v.innerHTML=viewVA(); wireVA(); }
   else if(state.view==='sim'){ v.innerHTML=viewSim(); wireSim(); }
   else if(state.view==='deliverables'){ v.innerHTML=viewDeliverables(); wireDeliverables(); }
   else if(state.view==='live'){ v.innerHTML=viewLive(); wireLive(); }
   else if(state.view==='discover'){ v.innerHTML=viewDiscover(discQ); wireDiscover(); }
-  const hideChrome=['deliverables','tools','catalog','csa','csatech','apibanks','prospecting','va','sim'].includes(state.view);
+  const hideChrome=['deliverables','tools','catalog','csa','csatech','apibanks','prospecting','va','sim','links'].includes(state.view);
   const tc=document.querySelector('.topcontrols'); if(tc) tc.classList.toggle('hide', hideChrome);
   const vbar=document.querySelector('#vertbar'), vres=document.querySelector('#vertResults'); if(vbar) vbar.classList.toggle('hide', hideChrome); if(vres) vres.classList.toggle('hide', hideChrome);
   // The MAVIS title header shows only on the Live Analysis view; the whole topbar hides on chrome-less views.
@@ -4012,6 +4015,339 @@ function renderIntg(stage){
   else { $('#iNext').onclick=()=>{ intgWiz.step++; renderTech(); }; }
 }
 // ---------- API Banks (documentation directory) ----------
+// ==================== LINKS BANK ====================
+// Table-style, hub-native (dark) Links Bank: search + Category/Type/Tool filters,
+// Quick Access row, sortable All Resources table, pagination, and an Admin View
+// toggle that reveals Add/Edit/Delete + Export/Import (default view is clean/link-only).
+// Source of truth = LINKS_BANK_DEFAULT (published on deploy); Admin edits save to the
+// browser (localStorage) as a draft; Export hands the list back for publishing.
+var LINKS_BANK_DEFAULT = [
+  {name:"CSA Copy - Escalation Scenarios — Mock Call", url:"https://docs.google.com/spreadsheets/d/1XyG68qlvFMx2UH6iN6Zt3bUhbnYSq52nuW1HGkTVdXI/edit?gid=1045951786#gid=1045951786", type:"Google Sheet", tool:"Google Sheets", category:"Escalations", desc:"Escalation matrix of client-escalation scenarios, each rated for CSA relevance with probing questions. Prep for mock calls and live escalations.", updated:"2026-08-14", quick:true, badge:"upd"},
+  {name:"CSA Contract & Client Objection Playbook", url:"https://docs.google.com/presentation/d/1Er05TMZzdHZ9JLfNky1pRV13c5RdJZAmGCsEgiavLw8/edit", type:"Google Slides", tool:"Google Slides", category:"Contracts", desc:"Internal field guide to the MAVIS Service Agreement — key terms plus scripted replies to common client objections.", updated:"2026-08-10", quick:false, badge:""},
+  {name:"Contract One-Pager - CSA", url:"https://drive.google.com/file/d/1mtwm1YxxkJTuGGAo_JOksKcCOzq7lL96/view?usp=drive_link", type:"PDF", tool:"Google Drive", category:"Contracts", desc:"One-page quick reference summarizing the MAVIS Service Agreement's main terms.", updated:"2026-08-09", quick:true, badge:""},
+  {name:"Tier 1: Nicole's Talk Track", url:"https://docs.google.com/document/d/17y2cm1RhlcIpNrRQiQpYZo6ROHOovdQZg7A8OnzgBro/edit?tab=t.0", type:"Google Doc", tool:"Google Docs", category:"Onboarding", desc:"Sample first-meeting talk track (a framework, not a script) for building client trust. Prep your intro / Go-Live call.", updated:"2026-08-08", quick:false, badge:""},
+  {name:"Mavis Onboarding Calls", url:"https://drive.google.com/drive/folders/19QoulLoH7bpDGoN2jizcbmuxMOkr9Q_T?usp=drive_link", type:"Drive folder", tool:"Google Drive", category:"Onboarding", desc:"Recordings of past MAVIS onboarding calls. Watch real examples of how sessions are run.", updated:"2026-08-15", quick:false, badge:"new"},
+  {name:"Nicole's Scheduler", url:"https://scheduler.zoom.us/tvag-cro/mock-session", type:"Zoom link", tool:"Zoom", category:"Scheduling", desc:"Booking page to schedule a mock-call / practice session with Nicole (CRO).", updated:"2026-08-05", quick:true, badge:""},
+  {name:"VA Hourly Update Tracker", url:"https://script.google.com/macros/s/AKfycbyDHvceakhsPYnhvy_eJ7b4q-q72LttHIPm4s0qnhVMzPsJq4vwy6nMUy5dc65p_DgTeA/exec", type:"Web app", tool:"Apps Script", category:"Trackers", desc:"Form for VAs to log hourly work updates. Submit your hourly activity here.", updated:"2026-08-02", quick:false, badge:""},
+  {name:"Mock Call Topics to Avoid", url:"https://drive.google.com/file/d/1Z-jeQ-hFJJeKLzfqwf2YKKDr_zS_0R3c/view?usp=drive_link", type:"Image", tool:"Google Drive", category:"Mock Calls", desc:"Quick-reference graphic of subjects to avoid during mock / client calls. Glance before a call.", updated:"2026-07-30", quick:false, badge:""},
+  {name:"Danger Zone Topics", url:"https://drive.google.com/file/d/15CGBiFGjAeBzJSkWkRZhn795uV_y6HIS/view?usp=drive_link", type:"Video", tool:"Google Drive", category:"Training", desc:"Training clip on high-risk \"danger zone\" topics to keep out of client conversations.", updated:"2026-07-28", quick:false, badge:""},
+  {name:"Tanner's Scheduler", url:"https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ1fyKKowWxC-a_3zAmhig-7WMfpUhSCwMilZW7cecqgeUlrRXCT-Rvv-TCK55IHdEJi9U4mvvBa", type:"Calendar link", tool:"Google Calendar", category:"Scheduling", desc:"Google Calendar booking page to schedule an appointment / mock session with Tanner.", updated:"2026-08-01", quick:false, badge:""},
+  {name:"CSA Incentive Scheme", url:"https://drive.google.com/file/d/1nIoehymHVQB9h8zFUw2DRegDrAjPOoqm/view?usp=drive_link", type:"PDF", tool:"Google Drive", category:"Reference", desc:"Outline of the CSA incentive and bonus structure. Understand how CSA performance is rewarded.", updated:"2026-07-25", quick:false, badge:""},
+  {name:"New Mavis UI Walkthrough", url:"https://drive.google.com/file/d/1wpUwLcHuvChRPqAoHPrNT_LocPljhbt4/view?usp=drive_link", type:"Video", tool:"Google Drive", category:"Training", desc:"Screen-recorded walkthrough of the new MAVIS interface. Learn the updated UI.", updated:"2026-08-12", quick:false, badge:""},
+  {name:"Knowledge Base", url:"https://ayen-bot.github.io/mavis-showcase/#csa/prompt", type:"Website", tool:"Website", category:"Reference", desc:"CSA knowledge base and prompt showcase. Reference hub for CSA prompts and how-to guidance.", updated:"2026-08-16", quick:true, badge:""},
+  {name:"Leading with Direct Language", url:"https://drive.google.com/file/d/1ym2B-nhAPWOuLWFLgKzTZ7JOp40vuIZf/view?usp=drive_link", type:"PDF", tool:"Google Drive", category:"Training", desc:"Guide to using clear, direct language with clients. Sharpen how you communicate.", updated:"2026-07-22", quick:false, badge:""},
+  {name:"Professional Presence Success Guide", url:"https://drive.google.com/file/d/1iUEp70wJeCBmGJSdzRWeN6gaHTzi3i2j/view?usp=drive_link", type:"PDF", tool:"Google Drive", category:"Training", desc:"Guide to projecting a professional presence on client calls. Strengthen your professional image.", updated:"2026-07-20", quick:false, badge:""},
+  {name:"POD Form", url:"https://script.google.com/a/macros/thevagroup.com/s/AKfycbwK9uvQaPcKaVIKhxZ_H-CYAZY2d_6AGhYzEte4RgpZopOnJeeKmyd2-Zqcrv_mm66w/exec", type:"Web app", tool:"Apps Script", category:"Trackers", desc:"Internal form to submit CSA POD placement details. Fill out for pod assignment.", updated:"2026-08-03", quick:false, badge:""},
+  {name:"Task Tracker", url:"https://script.google.com/macros/s/AKfycbyDHvceakhsPYnhvy_eJ7b4q-q72LttHIPm4s0qnhVMzPsJq4vwy6nMUy5dc65p_DgTeA/exec", type:"Web app", tool:"Apps Script", category:"Trackers", desc:"Log and track your task updates here (same tool as the VA Hourly Update Tracker).", updated:"2026-08-02", quick:true, badge:""}
+];
+var LB_KEY = "mavis_links_bank_v2";
+var lbState = { q:"", category:"", type:"", tool:"", sort:"recent", page:1, per:8, admin:false, editId:null };
+function lbUid(){ return "l"+Math.random().toString(36).slice(2,9); }
+function lbSeed(){ return LINKS_BANK_DEFAULT.map(function(l,i){ return Object.assign({id:"seed"+i}, l); }); }
+function lbGet(){ try{ var r=localStorage.getItem(LB_KEY); if(r){ var a=JSON.parse(r); if(Array.isArray(a)&&a.length) return a; } }catch(e){} return lbSeed(); }
+function lbSave(list){ try{ localStorage.setItem(LB_KEY, JSON.stringify(list)); }catch(e){} }
+var LB_ICON={"Google Sheet":"📊","Google Slides":"📽️","Google Doc":"📄","PDF":"📕","Drive folder":"📁","Zoom link":"🎥","Calendar link":"📅","Web app":"🧩","Website":"🌐","Image":"🖼️","Video":"🎬"};
+var LB_TCOL={"Google Sheet":"g","Google Slides":"a","Google Doc":"b","PDF":"r","Drive folder":"n","Zoom link":"b","Calendar link":"p","Web app":"p","Website":"t","Image":"k","Video":"k"};
+function lbIcon(t){ return LB_ICON[t]||"🔗"; }
+function lbBadge(t){ return '<span class="lbBadge lbb-'+(LB_TCOL[t]||"n")+'">'+esc(t)+'</span>'; }
+function lbDate(s){ if(!s) return "—"; var d=new Date(s+"T00:00:00"); if(isNaN(d)) return esc(s); return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); }
+function lbUniq(list,key){ var s=[]; list.forEach(function(l){ var v=l[key]; if(v&&s.indexOf(v)<0) s.push(v); }); s.sort(); return s; }
+function lbMatch(l){
+  var term=lbState.q.trim().toLowerCase();
+  var hay=(l.name+" "+l.desc+" "+l.tool+" "+l.category+" "+l.type).toLowerCase();
+  if(term && hay.indexOf(term)<0) return false;
+  if(lbState.category && l.category!==lbState.category) return false;
+  if(lbState.type && l.type!==lbState.type) return false;
+  if(lbState.tool && l.tool!==lbState.tool) return false;
+  return true;
+}
+function lbSort(a){
+  a=a.slice();
+  if(lbState.sort==="az") a.sort(function(x,y){return x.name.localeCompare(y.name);});
+  else if(lbState.sort==="za") a.sort(function(x,y){return y.name.localeCompare(x.name);});
+  else if(lbState.sort==="cat") a.sort(function(x,y){return (x.category||"").localeCompare(y.category||"")||x.name.localeCompare(y.name);});
+  else a.sort(function(x,y){return String(y.updated||"").localeCompare(String(x.updated||""));});
+  return a;
+}
+function viewLinks(){
+  var links=lbGet();
+  var cats=lbUniq(links,"category").length, tools=lbUniq(links,"tool").length;
+  return `<section class="card">
+    ${sectionHero('&#128279;','Links Bank','Find, filter, and open the resources CSAs use most &mdash; search by name, tool, or keyword and open in a new tab without leaving the hub.',[[links.length,'Links'],[cats,'Categories'],[tools,'Tools']])}
+    <div class="lbTop">
+      <button class="lbBtn primary" id="lbAdd">+ Add link</button>
+      <button class="lbBtn ghost" id="lbAdmin">Admin View</button>
+      <button class="lbBtn ghost lbAdminOnly" id="lbExport">Export</button>
+      <button class="lbBtn ghost lbAdminOnly" id="lbImport">Import</button>
+    </div>
+    <div class="lbAdminBanner lbAdminOnly">Admin View is on &mdash; add, edit, delete, and export the library. CSAs see a clean, link-only view.</div>
+    <div class="lbToolbar">
+      <div class="lbSearch"><span class="lbSi">&#128269;</span><input id="lbQ" placeholder="Search by name, keyword, or tool..." autocomplete="off"></div>
+      <div class="lbFilts">
+        <select class="lbSel" id="lbCat"></select>
+        <select class="lbSel" id="lbType"></select>
+        <select class="lbSel" id="lbTool"></select>
+        <button class="lbClear" id="lbClear">Clear all</button>
+      </div>
+    </div>
+    <div id="lbQaSec">
+      <div class="lbSecH"><span class="lbSecT">Quick Access</span><span class="lbSecC">Frequently used resources</span></div>
+      <div class="lbQa" id="lbQa"></div>
+    </div>
+    <div class="lbSecH lbAllH"><span class="lbSecT">All Resources</span><span class="lbSecC" id="lbAllCap"></span>
+      <select class="lbSel lbSort" id="lbSort">
+        <option value="recent">Sort by: Recently Updated</option>
+        <option value="az">Sort by: Name (A–Z)</option>
+        <option value="za">Sort by: Name (Z–A)</option>
+        <option value="cat">Sort by: Category</option>
+      </select></div>
+    <div class="lbTableWrap">
+      <table class="lbTable"><thead><tr>
+        <th>Resource Name</th><th class="lbHcat">Category</th><th>Type</th><th class="lbHupd">Last Updated</th><th style="text-align:right">Action</th>
+      </tr></thead><tbody id="lbRows"></tbody></table>
+      <div class="lbPfoot"><div class="lbPinfo" id="lbPinfo"></div><div class="lbPager" id="lbPager"></div></div>
+    </div>
+  </section>`;
+}
+function lbFillFilters(links){
+  function opts(sel,vals,label){ if(!sel) return; var cur=sel.value;
+    sel.innerHTML='<option value="">'+label+'</option>'+vals.map(function(v){return '<option value="'+esc(v)+'">'+esc(v)+'</option>';}).join("");
+    sel.value=cur; }
+  opts($('#lbCat'),lbUniq(links,"category"),"All Categories");
+  opts($('#lbType'),lbUniq(links,"type"),"All Types");
+  opts($('#lbTool'),lbUniq(links,"tool"),"All Tools");
+}
+function lbRenderQuick(links){
+  var qa=links.filter(function(l){return l.quick;});
+  var sec=$('#lbQaSec'), g=$('#lbQa'); if(!g) return;
+  if(sec) sec.style.display=qa.length?"":"none";
+  g.innerHTML=qa.map(function(l){
+    return '<div class="lbQaCard" data-open="'+esc(l.url)+'"><div class="lbIco">'+lbIcon(l.type)+'</div>'+
+      '<div class="lbQaM"><div class="lbQaN">'+esc(l.name)+'</div><div class="lbQaT">'+esc(l.tool)+'</div></div></div>';
+  }).join("");
+  g.querySelectorAll("[data-open]").forEach(function(c){ c.onclick=function(){ openExternal(c.getAttribute("data-open")); }; });
+}
+function lbRenderTable(links){
+  var all=lbSort(links.filter(lbMatch));
+  var total=all.length, pages=Math.max(1,Math.ceil(total/lbState.per));
+  if(lbState.page>pages) lbState.page=pages;
+  var start=(lbState.page-1)*lbState.per, slice=all.slice(start,start+lbState.per);
+  var tb=$('#lbRows'); if(!tb) return;
+  if(!total){ tb.innerHTML='<tr><td colspan="5"><div class="lbEmpty">No resources match. Try another keyword or clear the filters.</div></td></tr>'; }
+  else tb.innerHTML=slice.map(function(l){
+    var tag=l.badge==="new"?'<span class="lbTag lbTn">New</span>':l.badge==="upd"?'<span class="lbTag lbTu">Updated</span>':"";
+    return '<tr>'+
+      '<td><div class="lbRn"><div class="lbIco">'+lbIcon(l.type)+'</div><div class="lbRm">'+
+        '<div class="lbRnN">'+esc(l.name)+' '+tag+'</div><div class="lbRnD">'+esc(l.desc)+'</div></div></div></td>'+
+      '<td class="lbTcat">'+esc(l.category||"—")+'</td>'+
+      '<td>'+lbBadge(l.type)+'</td>'+
+      '<td class="lbTupd">'+lbDate(l.updated)+'</td>'+
+      '<td><div class="lbRowAct">'+
+        '<button class="lbOpen" data-open="'+esc(l.url)+'">Open &#8599;</button>'+
+        '<div class="lbKwrap lbAdminOnly"><button class="lbKebab" data-menu="'+l.id+'">&#8943;</button></div>'+
+      '</div></td></tr>';
+  }).join("");
+  tb.querySelectorAll("[data-open]").forEach(function(b){ b.onclick=function(){ openExternal(b.getAttribute("data-open")); }; });
+  tb.querySelectorAll("[data-menu]").forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); lbToggleMenu(b); }; });
+  var cap=$('#lbAllCap'); if(cap) cap.textContent=total+" resource"+(total===1?"":"s");
+  var endN=Math.min(start+lbState.per,total);
+  var pin=$('#lbPinfo'); if(pin) pin.textContent=total?("Showing "+(start+1)+" to "+endN+" of "+total+" resources"):"No resources";
+  lbRenderPager(pages);
+}
+function lbRenderPager(pages){
+  var p=$('#lbPager'); if(!p) return;
+  if(pages<=1){ p.innerHTML=""; return; }
+  var h='<button class="lbPg" '+(lbState.page===1?"disabled":"")+' data-pg="'+(lbState.page-1)+'">&#8249;</button>';
+  for(var i=1;i<=pages;i++) h+='<button class="lbPg'+(i===lbState.page?" act":"")+'" data-pg="'+i+'">'+i+'</button>';
+  h+='<button class="lbPg" '+(lbState.page===pages?"disabled":"")+' data-pg="'+(lbState.page+1)+'">&#8250;</button>';
+  p.innerHTML=h;
+  p.querySelectorAll("[data-pg]").forEach(function(b){ b.onclick=function(){ var n=+b.getAttribute("data-pg"); if(n>=1&&n<=pages){ lbState.page=n; lbRenderTable(lbGet()); } }; });
+}
+function lbToggleMenu(btn){
+  lbCloseMenus();
+  var id=btn.getAttribute("data-menu");
+  var m=document.createElement("div"); m.className="lbRowMenu";
+  m.innerHTML='<button data-edit="'+id+'">Edit</button><button class="del" data-del="'+id+'">Delete</button>';
+  btn.parentElement.appendChild(m);
+  m.querySelector("[data-edit]").onclick=function(){ lbCloseMenus(); lbOpenModal(id); };
+  m.querySelector("[data-del]").onclick=function(){ lbCloseMenus(); lbDelete(id); };
+}
+function lbCloseMenus(){ document.querySelectorAll(".lbRowMenu").forEach(function(m){ m.remove(); }); }
+function lbApply(){
+  var links=lbGet();
+  lbFillFilters(links); lbRenderQuick(links); lbRenderTable(links);
+}
+function lbEnsureModal(){
+  if(document.getElementById("lbOv")) return;
+  var ov=document.createElement("div"); ov.id="lbOv"; ov.className="lbOv";
+  ov.innerHTML='<div class="lbModal"><div class="lbMh"><span id="lbMTitle">Add a link</span><button class="lbMx" id="lbMClose">&times;</button></div>'+
+    '<div class="lbMb">'+
+    '<label class="wide">Resource name<input id="lbmName" placeholder="CSA Schedule Dashboard"></label>'+
+    '<label class="wide">URL<input id="lbmUrl" placeholder="https://..."></label>'+
+    '<label>Category<input id="lbmCat" placeholder="Onboarding"></label>'+
+    '<label>Type<input id="lbmType" placeholder="Google Sheet"></label>'+
+    '<label>Tool / System<input id="lbmTool" placeholder="Google Sheets"></label>'+
+    '<label>Snapshot image URL<input id="lbmImg" placeholder="optional"></label>'+
+    '<label class="wide">Description<input id="lbmDesc" placeholder="What this resource is used for"></label>'+
+    '<label class="row2"><input type="checkbox" id="lbmQuick"> Pin to Quick Access</label>'+
+    '</div><div class="lbMf"><button class="lbBtn ghost" id="lbmCancel">Cancel</button><button class="lbBtn primary" id="lbmSave">Save link</button></div></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener("click",function(e){ if(e.target===ov) lbCloseModal(); });
+  $('#lbMClose').onclick=lbCloseModal; $('#lbmCancel').onclick=lbCloseModal; $('#lbmSave').onclick=lbSaveModal;
+}
+function lbOpenModal(id){
+  lbEnsureModal();
+  lbState.editId=id||null;
+  var l=id?lbGet().filter(function(x){return x.id===id;})[0]:{name:"",url:"",category:"",type:"",tool:"",img:"",desc:"",quick:false};
+  $('#lbMTitle').textContent=id?"Edit link":"Add a link";
+  $('#lbmName').value=l.name||""; $('#lbmUrl').value=l.url||""; $('#lbmCat').value=l.category||"";
+  $('#lbmType').value=l.type||""; $('#lbmTool').value=l.tool||""; $('#lbmImg').value=l.img||"";
+  $('#lbmDesc').value=l.desc||""; $('#lbmQuick').checked=!!l.quick;
+  $('#lbOv').classList.add("show");
+}
+function lbCloseModal(){ var o=$('#lbOv'); if(o) o.classList.remove("show"); lbState.editId=null; }
+function lbSaveModal(){
+  var name=$('#lbmName').value.trim(), url=$('#lbmUrl').value.trim();
+  if(!name||!url){ alert("Name and URL are both required."); return; }
+  var today=new Date().toISOString().slice(0,10);
+  var rec={ name:name, url:url, category:$('#lbmCat').value.trim(), type:$('#lbmType').value.trim()||"Website",
+    tool:$('#lbmTool').value.trim(), img:$('#lbmImg').value.trim(), desc:$('#lbmDesc').value.trim(),
+    quick:$('#lbmQuick').checked, updated:today, badge:"" };
+  var list=lbGet();
+  if(lbState.editId){ var i=list.findIndex(function(x){return x.id===lbState.editId;}); if(i>=0){ rec.id=lbState.editId; rec.badge=list[i].badge; list[i]=rec; } }
+  else { rec.id=lbUid(); rec.badge="new"; list.push(rec); }
+  lbSave(list); lbCloseModal(); lbApply();
+}
+function lbDelete(id){ if(!confirm("Delete this link?")) return; lbSave(lbGet().filter(function(x){return x.id!==id;})); lbApply(); }
+function lbExport(){
+  var blob=new Blob([JSON.stringify(lbGet(),null,2)],{type:"application/json"}), url=URL.createObjectURL(blob);
+  var a=document.createElement("a"); a.href=url; a.download="links-bank.json"; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); },1500);
+}
+function lbImport(){
+  var inp=document.createElement("input"); inp.type="file"; inp.accept="application/json,.json";
+  inp.onchange=function(){ var f=inp.files&&inp.files[0]; if(!f) return; var r=new FileReader();
+    r.onload=function(){ try{ var a=JSON.parse(r.result); if(!Array.isArray(a)) throw 0;
+      var clean=a.filter(function(x){return x&&x.name&&x.url;}).map(function(x){return {
+        id:x.id||lbUid(), name:String(x.name), url:String(x.url), category:String(x.category||""),
+        type:String(x.type||"Website"), tool:String(x.tool||""), img:String(x.img||""), desc:String(x.desc||""),
+        quick:!!x.quick, updated:String(x.updated||""), badge:String(x.badge||"") };});
+      if(!clean.length){ alert("No valid links in that file."); return; }
+      lbSave(clean); lbApply();
+    }catch(e){ alert("That file is not a valid Links Bank export."); } };
+    r.readAsText(f); };
+  inp.click();
+}
+function lbInjectCss(){
+  if(document.getElementById("lbCss2")) return;
+  var css=`
+  .lbTop{display:flex;gap:9px;flex-wrap:wrap;margin:2px 0 14px}
+  .lbBtn{border:1px solid var(--line);background:var(--surface2);color:var(--ink2,#cbd5e1);font-weight:700;font-size:12.5px;padding:9px 15px;border-radius:9px;cursor:pointer;transition:.15s}
+  .lbBtn:hover{border-color:var(--muted)}
+  .lbBtn.primary{background:var(--cyan);border-color:var(--cyan);color:#04222a}
+  .lbBtn.primary:hover{filter:brightness(1.08)}
+  .lbBtn.ghost.on,.lbBtn.on{background:rgba(99,102,241,.18);border-color:var(--indigo);color:var(--acc2,#c7d2fe)}
+  .lbAdminOnly{display:none}
+  body.lbadmin .lbAdminOnly{display:inline-flex}
+  body.lbadmin td .lbAdminOnly{display:flex}
+  .lbAdminBanner{align-items:center;gap:8px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);color:var(--warn,#fcd34d);border-radius:9px;padding:9px 13px;font-size:12.5px;font-weight:650;margin-bottom:14px}
+  .lbToolbar{background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin-bottom:18px}
+  .lbSearch{position:relative}
+  .lbSearch input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 13px 11px 40px;color:var(--ink);font-size:14px}
+  .lbSearch input:focus{outline:none;border-color:var(--cyan)}
+  .lbSi{position:absolute;left:13px;top:50%;transform:translateY(-50%);opacity:.6;font-size:14px}
+  .lbFilts{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  .lbSel{appearance:none;-webkit-appearance:none;background:var(--bg) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>") no-repeat right 11px center;border:1px solid var(--line);border-radius:9px;padding:9px 30px 9px 12px;color:var(--ink2,#cbd5e1);font-size:13px;font-weight:600;cursor:pointer}
+  .lbSel:focus{outline:none;border-color:var(--cyan)}
+  .lbClear{border:0;background:transparent;color:var(--acc,#a5f3fc);font-weight:650;font-size:12.5px;cursor:pointer;padding:8px 6px}
+  .lbClear:hover{text-decoration:underline}
+  .lbSecH{display:flex;align-items:center;gap:10px;margin:0 2px 12px}
+  .lbSecT{font-size:15px;font-weight:750;color:var(--ink)}
+  .lbSecC{font-size:12px;color:var(--muted)}
+  .lbAllH{margin-top:24px}
+  .lbAllH .lbSort{margin-left:auto}
+  .lbQa{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:11px;margin-bottom:8px}
+  .lbQaCard{display:flex;align-items:center;gap:11px;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:12px 13px;cursor:pointer;transition:.15s}
+  .lbQaCard:hover{transform:translateY(-1px);border-color:var(--muted);box-shadow:0 6px 18px rgba(0,0,0,.25)}
+  .lbQaN{font-weight:700;font-size:13px;color:var(--ink);line-height:1.25}
+  .lbQaT{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .lbIco{width:38px;height:38px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--bg);border:1px solid var(--line)}
+  .lbTableWrap{background:var(--surface2);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .lbTable{width:100%;border-collapse:collapse}
+  .lbTable thead th{text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:12px 16px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--line)}
+  .lbTable tbody td{padding:13px 16px;border-bottom:1px solid var(--hairline,rgba(51,65,85,.6));vertical-align:middle;font-size:13px;color:var(--ink2,#cbd5e1)}
+  .lbTable tbody tr:last-child td{border-bottom:0}
+  .lbTable tbody tr:hover{background:rgba(255,255,255,.025)}
+  .lbRn{display:flex;align-items:center;gap:12px}
+  .lbRnN{font-weight:680;color:var(--ink);font-size:13.5px;display:flex;align-items:center;gap:8px}
+  .lbRnD{color:var(--muted);font-size:12px;margin-top:2px;max-width:430px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lbTag{font-size:9.5px;font-weight:800;letter-spacing:.04em;padding:2px 6px;border-radius:5px;text-transform:uppercase}
+  .lbTn{background:rgba(16,185,129,.16);color:var(--pos,#6ee7b7);border:1px solid rgba(16,185,129,.4)}
+  .lbTu{background:rgba(245,158,11,.16);color:var(--warn,#fcd34d);border:1px solid rgba(245,158,11,.4)}
+  .lbBadge{display:inline-flex;align-items:center;font-size:11.5px;font-weight:650;padding:3px 10px;border-radius:15px;border:1px solid}
+  .lbb-g{color:#6ee7b7;background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.35)}
+  .lbb-b{color:#a5f3fc;background:rgba(6,182,212,.14);border-color:rgba(6,182,212,.35)}
+  .lbb-r{color:#fca5a5;background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.35)}
+  .lbb-a{color:#fcd34d;background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.35)}
+  .lbb-p{color:#c7d2fe;background:rgba(99,102,241,.16);border-color:rgba(99,102,241,.4)}
+  .lbb-k{color:#f9a8d4;background:rgba(236,72,153,.15);border-color:rgba(236,72,153,.4)}
+  .lbb-t{color:#5eead4;background:rgba(20,184,166,.14);border-color:rgba(20,184,166,.35)}
+  .lbb-n{color:#cbd5e1;background:rgba(148,163,184,.14);border-color:rgba(148,163,184,.3)}
+  .lbTupd{color:var(--muted);font-size:12.5px;white-space:nowrap}
+  .lbRowAct{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+  .lbOpen{border:1px solid var(--line);background:transparent;color:var(--acc,#a5f3fc);font-weight:700;font-size:12.5px;padding:7px 13px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .lbOpen:hover{background:rgba(6,182,212,.12);border-color:var(--cyan)}
+  .lbKwrap{position:relative}
+  .lbKebab{border:1px solid transparent;background:transparent;color:var(--muted);width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:16px}
+  .lbKebab:hover{background:rgba(255,255,255,.06);color:var(--ink)}
+  .lbRowMenu{position:absolute;right:0;top:34px;background:var(--surface);border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 30px rgba(0,0,0,.4);padding:5px;z-index:30;min-width:130px}
+  .lbRowMenu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:8px 10px;border-radius:6px;font-size:13px;color:var(--ink2,#cbd5e1);cursor:pointer}
+  .lbRowMenu button:hover{background:rgba(255,255,255,.06)}
+  .lbRowMenu button.del{color:var(--neg,#fca5a5)}
+  .lbEmpty{padding:36px 16px;text-align:center;color:var(--muted)}
+  .lbPfoot{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-top:1px solid var(--line);background:rgba(255,255,255,.02)}
+  .lbPinfo{color:var(--muted);font-size:12.5px}
+  .lbPager{display:flex;gap:6px}
+  .lbPg{min-width:32px;height:32px;border:1px solid var(--line);background:var(--bg);border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink2,#cbd5e1);padding:0 8px}
+  .lbPg:hover{border-color:var(--muted)}
+  .lbPg.act{background:var(--cyan);border-color:var(--cyan);color:#04222a}
+  .lbPg:disabled{opacity:.4;cursor:default}
+  .lbOv{position:fixed;inset:0;background:rgba(2,6,18,.62);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
+  .lbOv.show{display:flex}
+  .lbModal{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:0 24px 70px rgba(0,0,0,.5);width:100%;max-width:520px;max-height:90vh;overflow:auto}
+  .lbMh{padding:17px 20px;border-bottom:1px solid var(--line);font-weight:750;font-size:16px;color:var(--ink);display:flex;justify-content:space-between;align-items:center}
+  .lbMx{border:0;background:transparent;color:var(--muted);font-size:22px;cursor:pointer;line-height:1}
+  .lbMb{padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .lbMb label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700;color:var(--muted)}
+  .lbMb .wide{grid-column:1/-1}
+  .lbMb .row2{grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;color:var(--ink2,#cbd5e1);font-size:13px}
+  .lbMb .row2 input{width:16px;height:16px}
+  .lbMb input{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;color:var(--ink);font-size:13.5px;font-weight:450}
+  .lbMb input:focus{outline:none;border-color:var(--cyan)}
+  .lbMf{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:9px}
+  @media(max-width:720px){ .lbAllH .lbSort{margin-left:0} .lbRnD{max-width:180px} .lbHcat,.lbTcat,.lbHupd,.lbTupd{display:none} .lbMb{grid-template-columns:1fr} }`;
+  var st=document.createElement("style"); st.id="lbCss2"; st.textContent=css; document.head.appendChild(st);
+}
+function wireLinks(){
+  lbInjectCss();
+  document.body.classList.toggle("lbadmin", lbState.admin);
+  var adminBtn=$('#lbAdmin'); if(adminBtn) adminBtn.classList.toggle("on", lbState.admin);
+  var q=$('#lbQ'); if(q){ q.value=lbState.q; q.addEventListener("input",function(){ lbState.q=this.value; lbState.page=1; lbRenderTable(lbGet()); }); }
+  var fc=$('#lbCat'); if(fc) fc.addEventListener("change",function(){ lbState.category=this.value; lbState.page=1; lbRenderTable(lbGet()); });
+  var ft=$('#lbType'); if(ft) ft.addEventListener("change",function(){ lbState.type=this.value; lbState.page=1; lbRenderTable(lbGet()); });
+  var fl=$('#lbTool'); if(fl) fl.addEventListener("change",function(){ lbState.tool=this.value; lbState.page=1; lbRenderTable(lbGet()); });
+  var so=$('#lbSort'); if(so){ so.value=lbState.sort; so.addEventListener("change",function(){ lbState.sort=this.value; lbRenderTable(lbGet()); }); }
+  var cl=$('#lbClear'); if(cl) cl.onclick=function(){ lbState.q=lbState.category=lbState.type=lbState.tool=""; lbState.page=1;
+    if(q)q.value=""; if(fc)fc.value=""; if(ft)ft.value=""; if(fl)fl.value=""; lbApply(); };
+  var add=$('#lbAdd'); if(add) add.onclick=function(){ lbOpenModal(null); };
+  var ex=$('#lbExport'); if(ex) ex.onclick=lbExport;
+  var im=$('#lbImport'); if(im) im.onclick=lbImport;
+  if(adminBtn) adminBtn.onclick=function(){ lbState.admin=!lbState.admin; document.body.classList.toggle("lbadmin",lbState.admin); adminBtn.classList.toggle("on",lbState.admin); };
+  if(!window.__lbMenuBound){ document.addEventListener("click",lbCloseMenus); window.__lbMenuBound=true; }
+  lbApply();
+}
+// ================== END LINKS BANK ==================
+
 function viewApiBanks(){
   const banks=DATA.apibanks||[];
   if(!banks.length) return `<section class="card"><h2 class="sec">API Banks</h2><p class="lead">API documentation bank unavailable.</p></section>`;
