@@ -2573,7 +2573,7 @@ function lbRenderTable(links){
     var tag=l.badge==="new"?'<span class="lbTag lbTn">New</span>':l.badge==="upd"?'<span class="lbTag lbTu">Updated</span>':"";
     return '<tr>'+
       '<td><div class="lbRn"><div class="lbIco">'+lbIcon(l.type)+'</div><div class="lbRm">'+
-        '<div class="lbRnN">'+esc(l.name)+' '+tag+'</div><div class="lbRnD">'+esc(l.desc)+'</div></div></div></td>'+
+        '<div class="lbRnN"><button class="lbNameBtn" data-preview="'+l.id+'" title="Preview this resource">'+esc(l.name)+'</button> '+tag+'</div><div class="lbRnD">'+esc(l.desc)+'</div></div></div></td>'+
       '<td class="lbTcat">'+esc(l.category||"—")+'</td>'+
       '<td>'+lbBadge(l.type)+'</td>'+
       '<td class="lbTupd">'+lbDate(l.updated)+'</td>'+
@@ -2584,6 +2584,7 @@ function lbRenderTable(links){
   }).join("");
   tb.querySelectorAll("[data-open]").forEach(function(b){ b.onclick=function(){ openExternal(b.getAttribute("data-open")); }; });
   tb.querySelectorAll("[data-menu]").forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); lbToggleMenu(b); }; });
+  tb.querySelectorAll("[data-preview]").forEach(function(b){ b.onclick=function(){ lbOpenPreview(b.getAttribute("data-preview")); }; });
   var cap=$('#lbAllCap'); if(cap) cap.textContent=total+" resource"+(total===1?"":"s");
   var endN=Math.min(start+lbState.per,total);
   var pin=$('#lbPinfo'); if(pin) pin.textContent=total?("Showing "+(start+1)+" to "+endN+" of "+total+" resources"):"No resources";
@@ -2612,6 +2613,42 @@ function lbApply(){
   var links=lbGet();
   lbFillFilters(links); lbRenderQuick(links); lbRenderTable(links);
 }
+function lbFileId(url){
+  var s=String(url||"");
+  var m=s.match(/\/(?:file\/d|document\/d|spreadsheets\/d|presentation\/d|drive\/folders|folders)\/([-\w]{20,})/) || s.match(/[?&]id=([-\w]{20,})/);
+  return m?m[1]:"";
+}
+function lbPreviewImg(l){ if(l.img) return l.img; var id=lbFileId(l.url); return id?("https://drive.google.com/thumbnail?id="+id+"&sz=w1000"):""; }
+function lbEnsurePreview(){
+  if(document.getElementById("lbPv")) return;
+  var ov=document.createElement("div"); ov.id="lbPv"; ov.className="lbPv";
+  ov.innerHTML='<div class="lbPvCard"><button class="lbPvX" id="lbPvClose">&times;</button>'+
+    '<div class="lbPvSnap" id="lbPvSnap"></div>'+
+    '<div class="lbPvBody">'+
+      '<div class="lbPvHead"><div class="lbIco" id="lbPvIco"></div><div class="lbPvHt"><div class="lbPvName" id="lbPvName"></div><div class="lbPvMeta" id="lbPvMeta"></div></div></div>'+
+      '<div class="lbPvDesc" id="lbPvDesc"></div>'+
+      '<div class="lbPvFoot"><button class="lbBtn primary" id="lbPvOpen">Open Link &#8599;</button><button class="lbBtn ghost" id="lbPvCancel">Close</button></div>'+
+    '</div></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener("click",function(e){ if(e.target===ov) lbClosePreview(); });
+  $('#lbPvClose').onclick=lbClosePreview; $('#lbPvCancel').onclick=lbClosePreview;
+}
+function lbOpenPreview(id){
+  lbEnsurePreview();
+  var l=lbGet().filter(function(x){return x.id===id;})[0]; if(!l) return;
+  var img=lbPreviewImg(l), host="";
+  try{ host=new URL(l.url).hostname.replace(/^www\./,""); }catch(e){}
+  var snap='<div class="lbPvPh"><div class="lbPvPhIco">'+lbIcon(l.type)+'</div><div class="lbPvPhT">Preview not available</div><div class="lbPvPhS">'+esc(host||l.type)+'</div></div>'+
+    (img?'<img class="lbPvImg" src="'+esc(img)+'" alt="" referrerpolicy="no-referrer" onerror="this.remove()">':'');
+  $('#lbPvSnap').innerHTML=snap;
+  $('#lbPvIco').innerHTML=lbIcon(l.type);
+  $('#lbPvName').textContent=l.name||"";
+  $('#lbPvMeta').innerHTML=lbBadge(l.type)+'<span class="lbPvDot">&middot;</span>'+esc(l.tool||"")+(l.category?'<span class="lbPvDot">&middot;</span>'+esc(l.category):"");
+  $('#lbPvDesc').textContent=l.desc||"No description yet.";
+  $('#lbPvOpen').onclick=function(){ openExternal(l.url); };
+  $('#lbPv').classList.add("show");
+}
+function lbClosePreview(){ var o=$('#lbPv'); if(o) o.classList.remove("show"); }
 function lbEnsureModal(){
   if(document.getElementById("lbOv")) return;
   var ov=document.createElement("div"); ov.id="lbOv"; ov.className="lbOv";
@@ -2760,6 +2797,26 @@ function lbInjectCss(){
   .lbMb input{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;color:var(--ink);font-size:13.5px;font-weight:450}
   .lbMb input:focus{outline:none;border-color:var(--cyan)}
   .lbMf{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:9px}
+  .lbNameBtn{border:0;background:transparent;padding:0;margin:0;font:inherit;font-weight:680;color:var(--ink);cursor:pointer;text-align:left}
+  .lbNameBtn:hover{color:var(--acc,#a5f3fc);text-decoration:underline}
+  .lbPv{position:fixed;inset:0;background:rgba(2,6,18,.66);display:none;align-items:center;justify-content:center;z-index:210;padding:20px}
+  .lbPv.show{display:flex}
+  .lbPvCard{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.55);width:100%;max-width:520px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column}
+  .lbPvX{position:absolute;top:10px;right:10px;z-index:2;border:0;background:rgba(0,0,0,.5);color:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:18px;line-height:1}
+  .lbPvSnap{position:relative;height:258px;background:linear-gradient(145deg,var(--surface2),var(--bg));border-bottom:1px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .lbPvImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+  .lbPvPh{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;color:var(--muted);padding:16px}
+  .lbPvPhIco{font-size:46px;opacity:.85}
+  .lbPvPhT{font-size:13px;font-weight:650;color:var(--ink2,#cbd5e1)}
+  .lbPvPhS{font-size:12px;color:var(--muted)}
+  .lbPvBody{padding:16px 18px;overflow:auto}
+  .lbPvHead{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+  .lbPvHt{min-width:0}
+  .lbPvName{font-size:16px;font-weight:750;color:var(--ink);line-height:1.25}
+  .lbPvMeta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:5px}
+  .lbPvDot{opacity:.5}
+  .lbPvDesc{color:var(--ink2,#cbd5e1);font-size:13.5px;line-height:1.55;margin-bottom:16px}
+  .lbPvFoot{display:flex;gap:9px}
   @media(max-width:720px){ .lbAllH .lbSort{margin-left:0} .lbRnD{max-width:180px} .lbHcat,.lbTcat,.lbHupd,.lbTupd{display:none} .lbMb{grid-template-columns:1fr} }`;
   var st=document.createElement("style"); st.id="lbCss2"; st.textContent=css; document.head.appendChild(st);
 }
