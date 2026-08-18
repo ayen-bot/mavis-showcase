@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ticket Dashboard · CSA Knowledge Hub</title>
+<title>Ticket Dashboard · CSA</title>
 <style>
   :root{
     --bg:#F6F7F9;--panel:#FFF;--line:#E7E9EE;--line2:#EEF0F4;--ink:#111827;--ink2:#374151;--muted:#6B7280;--faint:#9CA3AF;
@@ -13,23 +13,79 @@
     --red:#B42318;--red-bg:#FEF3F2;--red-bd:#FECDCA;--amber:#B54708;--amber-bg:#FFFAEB;--amber-bd:#FEDF89;
     --purple:#6941C6;--purple-bg:#F4F3FF;--purple-bd:#D9D6FE;--gray:#475467;--gray-bg:#F2F4F7;--gray-bd:#E4E7EC;
   }
-  *{box-sizing:border-box}html,body{margin:0}
-  body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5}
-  .wrap{max-width:1200px;margin:0 auto;padding:24px 22px 56px}
-  .top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:6px}
-  .brand{display:flex;align-items:center;gap:11px}
-  .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#4F46E5,#7C6CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800}
-  h1{margin:0;font-size:22px;letter-spacing:-.02em}.sub{margin:2px 0 0;color:var(--muted);font-size:13px}
-  .btn{border:1px solid var(--line);background:var(--panel);color:var(--ink2);font-weight:600;font-size:13px;padding:9px 14px;border-radius:9px;cursor:pointer;transition:.14s}
-  .btn:hover{background:var(--line2)}.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}.btn.primary:hover{filter:brightness(1.06)}
-  .btn.ghost{background:transparent}
-  .tabs{display:flex;gap:6px;margin:18px 0 16px;border-bottom:1px solid var(--line)}
-  .tab{border:0;background:transparent;padding:10px 14px;font-weight:650;font-size:14px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
-  .tab.active{color:var(--brand-ink);border-bottom-color:var(--brand)}
-  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px}
-  .tile{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px 14px;box-shadow:var(--shadow);cursor:pointer;transition:.14s}
-  .tile:hover{border-color:#d3d7e0}.tile.on{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
-  .tile .n{font-size:22px;font-weight:800}.tile .l{font-size:12px;color:var(--muted);margin-top:2px}
+  *{box-sizing:border-box}html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .app{display:flex;min-height:100vh}
+
+  /* Sidebar */
+  .side{width:236px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+  .brand{display:flex;align-items:center;gap:10px;padding:18px 18px 14px}
+  .brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#4F46E5,#7C6CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px}
+  .brand .bt{font-weight:700;font-size:14px;letter-spacing:-.01em}
+  .brand .bs{font-size:11px;color:var(--muted)}
+  .nav{padding:8px 12px;display:flex;flex-direction:column;gap:2px}
+  .navi{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;color:var(--ink2);font-weight:500;cursor:pointer;font-size:13.5px}
+  .navi:hover{background:var(--line2)}
+  .navi.active{background:var(--brand-soft);color:var(--brand-ink);font-weight:650}
+  .navi .ic{width:18px;text-align:center;font-size:15px;opacity:.9}
+  .side .grow{flex:1}
+  .help{margin:12px;padding:14px;background:linear-gradient(160deg,#F4F3FF,#EEF0FF);border:1px solid #E0E1FB;border-radius:12px}
+  .help h4{margin:0 0 4px;font-size:13px}.help p{margin:0 0 10px;font-size:12px;color:var(--muted)}
+  .help a{display:inline-block;font-size:12px;font-weight:650;color:var(--brand-ink)}
+
+  /* Main */
+  .main{flex:1;min-width:0;padding:26px 30px 44px}
+  .head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+  .head h1{margin:0;font-size:24px;letter-spacing:-.02em}
+  .head .sub{margin:4px 0 0;color:var(--muted);font-size:13.5px}
+  .hbtns{display:flex;gap:9px;align-items:center}
+  .btn{border:1px solid var(--line);background:var(--panel);color:var(--ink2);font-weight:600;font-size:13px;padding:9px 14px;border-radius:9px;cursor:pointer;transition:.14s;white-space:nowrap}
+  .btn:hover{background:var(--line2)}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}.btn.primary:hover{filter:brightness(1.06)}
+
+  /* Cards + grid */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card .ch{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .card .ch h3{margin:0;font-size:14px}.card .ch .lnk{font-size:12.5px;font-weight:650;color:var(--brand-ink);cursor:pointer}
+  .card .cb{padding:16px 18px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+
+  /* Metric tiles */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:16px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px 15px;box-shadow:var(--shadow)}
+  .tile.click{cursor:pointer;transition:.14s}.tile.click:hover{border-color:#d3d7e0;box-shadow:var(--shadow2)}
+  .tile .n{font-size:24px;font-weight:800;line-height:1}
+  .tile .l{font-size:12px;color:var(--muted);margin-top:5px}
+  .tile .n.red{color:var(--red)}.tile .n.amber{color:var(--amber)}.tile .n.green{color:var(--green)}
+
+  /* Priority + SLA bars */
+  .brow{display:flex;align-items:center;gap:10px;margin:9px 0}
+  .brow .bl{width:88px;font-size:12.5px;color:var(--ink2);font-weight:600}
+  .brow .bar{flex:1;height:8px;border-radius:6px;background:var(--gray-bg);overflow:hidden}
+  .brow .bar>span{display:block;height:100%;border-radius:6px}
+  .brow .bn{width:26px;text-align:right;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+  .slaline{display:flex;gap:12px;flex-wrap:wrap}
+  .slabox{flex:1;min-width:120px;border:1px solid var(--line);border-radius:10px;padding:12px 13px}
+  .slabox .n{font-size:22px;font-weight:800}.slabox .l{font-size:12px;color:var(--muted);margin-top:2px}
+  .slabox.bad{background:var(--red-bg);border-color:var(--red-bd)}.slabox.bad .n{color:var(--red)}
+  .slabox.warn{background:var(--amber-bg);border-color:var(--amber-bd)}.slabox.warn .n{color:var(--amber)}
+  .slabox.ok{background:var(--green-bg);border-color:var(--green-bd)}.slabox.ok .n{color:var(--green)}
+
+  /* Needs-attention list */
+  .na{display:flex;flex-direction:column}
+  .naitem{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line2);cursor:pointer}
+  .naitem:last-child{border-bottom:0}.naitem:hover{background:#FbFbFD}
+  .naitem .nm{font-weight:640;font-size:13.5px}.naitem .sub{font-size:12px;color:var(--muted);margin-top:1px}
+  .naitem .grow{flex:1;min-width:0}
+  .flag{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:12px;white-space:nowrap}
+  .flag.over{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+  .flag.risk{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+  .flag.un{background:var(--gray-bg);color:var(--gray);border:1px solid var(--gray-bd)}
+  .empty{padding:26px;text-align:center;color:var(--muted)}
+
+  /* Tickets table */
   .toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
   .search{position:relative;flex:1;min-width:220px}
   .search input{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px 10px 36px;font-size:14px;background:#fff}
@@ -49,13 +105,14 @@
   .st-WaitingforCSA{color:var(--purple);background:var(--purple-bg);border-color:var(--purple-bd)}
   .st-Resolved{color:var(--green);background:var(--green-bg);border-color:var(--green-bd)}
   .st-Closed{color:var(--gray);background:var(--gray-bg);border-color:var(--gray-bd)}
-  .pri-High,.pri-Urgent,.pri-Critical{color:var(--red);background:var(--red-bg);border-color:var(--red-bd)}
-  .pri-Medium{color:var(--amber);background:var(--amber-bg);border-color:var(--amber-bd)}
-  .pri-Low{color:var(--gray);background:var(--gray-bg);border-color:var(--gray-bd)}
+  .pri-High,.pri-Urgent,.pri-Critical,.pri-P1{color:var(--red);background:var(--red-bg);border-color:var(--red-bd)}
+  .pri-Medium,.pri-P2,.pri-P3{color:var(--amber);background:var(--amber-bg);border-color:var(--amber-bd)}
+  .pri-Low,.pri-P4{color:var(--gray);background:var(--gray-bg);border-color:var(--gray-bd)}
   .manage{border:1px solid var(--line);background:#fff;color:var(--brand-ink);font-weight:650;font-size:12.5px;padding:7px 12px;border-radius:8px;cursor:pointer}
   .manage:hover{background:var(--brand-soft);border-color:#C7C9F7}
-  .muted{color:var(--muted)}.empty{padding:40px;text-align:center;color:var(--muted)}
-  /* modal / drawer */
+  .muted{color:var(--muted)}
+
+  /* Modal + toast + setup (shared) */
   .ov{position:fixed;inset:0;background:rgba(16,24,40,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}
   .ov.show{display:flex}
   .modal{background:#fff;border-radius:14px;box-shadow:var(--shadow2);width:100%;max-width:540px;max-height:92vh;overflow:auto}
@@ -63,54 +120,84 @@
   .mh .t{font-weight:750;font-size:16px}.mh .id{color:var(--muted);font-size:12.5px;margin-top:2px}
   .mx{border:0;background:transparent;font-size:22px;color:var(--faint);cursor:pointer;line-height:1}
   .mb{padding:18px 20px}
-  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:13px;margin-bottom:14px}
-  .kv .k{color:var(--muted)}
-  .fld{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
-  .fld label{font-size:12px;font-weight:700;color:var(--ink2)}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:13px;margin-bottom:14px}.kv .k{color:var(--muted)}
+  .fld{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}.fld label{font-size:12px;font-weight:700;color:var(--ink2)}
   .fld input,.fld select,.fld textarea{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13.5px;background:#fff;font-family:inherit}
   .fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:#C7C9F7;box-shadow:0 0 0 3px var(--brand-soft)}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .mf{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:9px}
-  .mf .right{display:flex;gap:9px}
+  .gg2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .mf{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:9px}.mf .right{display:flex;gap:9px}
   .hint{font-size:12px;color:var(--muted)}
-  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:11px 18px;border-radius:10px;font-size:13.5px;box-shadow:var(--shadow2);opacity:0;pointer-events:none;transition:.25s;z-index:80}
-  .toast.show{opacity:1}
-  /* setup */
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:11px 18px;border-radius:10px;font-size:13.5px;box-shadow:var(--shadow2);opacity:0;pointer-events:none;transition:.25s;z-index:80}.toast.show{opacity:1}
   .setup{max-width:520px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:26px}
   .setup h2{margin:0 0 6px}.setup p{color:var(--muted);margin:0 0 18px;font-size:13.5px}
-  .del{color:var(--red);border-color:var(--red-bd)}
-  @media(max-width:640px){ .kv{grid-template-columns:1fr} .grid2{grid-template-columns:1fr} }
+  @media(max-width:760px){.side{display:none}.gg2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<div class="wrap" id="app" style="display:none">
-  <div class="top">
-    <div class="brand"><div class="logo">CS</div><div><h1>Ticket Dashboard</h1><div class="sub">Manage and monitor tickets. Changes sync to the live sheet and notify the reporting CSA.</div></div></div>
-    <div style="display:flex;gap:9px"><button class="btn ghost" id="refresh">↻ Refresh</button><button class="btn ghost" id="settings">Settings</button></div>
-  </div>
-  <div id="ticketsView">
-    <div class="tiles" id="tiles"></div>
-    <div class="toolbar">
-      <div class="search"><span class="si">🔍</span><input id="q" placeholder="Search ticket, title, CSA, client..."></div>
-      <select class="filt" id="fStatus"><option value="">All statuses</option></select>
-      <select class="filt" id="fOwner"><option value="">All owners</option></select>
-      <select class="filt" id="fCsa"><option value="">All CSAs</option></select>
-    </div>
-    <div class="tablewrap"><table>
-      <thead><tr><th>Ticket</th><th>CSA / Client</th><th>Priority</th><th>Owner</th><th>Status</th><th>Updated</th><th></th></tr></thead>
-      <tbody id="trows"></tbody></table><div class="empty" id="tempty" style="display:none"></div></div>
-  </div>
+<div class="app" id="app" style="display:none">
+  <aside class="side">
+    <div class="brand"><div class="logo">TD</div><div><div class="bt">Ticket Dashboard</div><div class="bs">CSA Tech</div></div></div>
+    <nav class="nav">
+      <div class="navi active" data-view="overview"><span class="ic">▦</span> Overview</div>
+      <div class="navi" data-view="tickets"><span class="ic">🎫</span> Tickets</div>
+      <div class="navi" data-view="settings"><span class="ic">⚙</span> Settings</div>
+    </nav>
+    <div class="grow"></div>
+    <div class="help"><h4>Need help?</h4><p>Submit or check a ticket in the Knowledge Hub.</p><a href="https://ayen-bot.github.io/mavis-showcase/#csatech" target="_blank" rel="noopener">Ask CSA Tech →</a></div>
+  </aside>
 
-  </div>
+  <main class="main">
+    <!-- OVERVIEW -->
+    <div id="overviewView">
+      <div class="head">
+        <div><h1>Overview</h1><p class="sub">High-level ticket health, priorities, and what needs attention.</p></div>
+        <div class="hbtns"><button class="btn" id="ovRefresh">↻ Refresh</button><button class="btn primary" id="ovGoTickets">View all tickets →</button></div>
+      </div>
+      <div class="tiles" id="ovTiles"></div>
+      <div class="grid2" style="margin-bottom:16px">
+        <div class="card"><div class="ch"><h3>Priorities (open tickets)</h3></div><div class="cb" id="ovPrio"></div></div>
+        <div class="card"><div class="ch"><h3>SLA status</h3></div><div class="cb"><div class="slaline" id="ovSla"></div><p class="hint" id="ovSlaNote" style="margin:12px 0 0"></p></div></div>
+      </div>
+      <div class="card"><div class="ch"><h3>Needs attention</h3><span class="lnk" id="ovSeeAll">See all tickets →</span></div><div class="cb"><div class="na" id="ovNeeds"></div></div></div>
+    </div>
+
+    <!-- TICKETS -->
+    <div id="ticketsView" style="display:none">
+      <div class="head">
+        <div><h1>Tickets</h1><p class="sub">Manage and update every ticket. Changes sync to the sheet and notify the reporting CSA.</p></div>
+        <div class="hbtns"><button class="btn" id="tkRefresh">↻ Refresh</button></div>
+      </div>
+      <div class="tiles" id="tiles"></div>
+      <div class="toolbar">
+        <div class="search"><span class="si">🔍</span><input id="q" placeholder="Search ticket, title, CSA, client..."></div>
+        <select class="filt" id="fStatus"><option value="">All statuses</option></select>
+        <select class="filt" id="fOwner"><option value="">All owners</option></select>
+        <select class="filt" id="fCsa"><option value="">All CSAs</option></select>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Ticket</th><th>CSA / Client</th><th>Priority</th><th>Owner</th><th>Status</th><th>SLA</th><th>Updated</th><th></th></tr></thead>
+        <tbody id="trows"></tbody></table><div class="empty" id="tempty" style="display:none"></div></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="settingsView" style="display:none">
+      <div class="head"><div><h1>Settings</h1><p class="sub">Connect the dashboard to your ticket relay.</p></div></div>
+      <div class="card" style="max-width:560px"><div class="cb">
+        <div class="fld"><label>Relay web app URL (ends in /exec)</label><input id="setUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
+        <div style="display:flex;gap:9px"><button class="btn primary" id="setSave">Save & connect</button><span class="hint" id="setState" style="align-self:center"></span></div>
+        <p class="hint" style="margin-top:14px">Saved to this browser only. Add <b>?mock=1</b> to the page URL to preview with sample data.</p>
+      </div></div>
+    </div>
+  </main>
 </div>
 
-<!-- Setup -->
+<!-- First-run setup -->
 <div class="setup" id="setup" style="display:none">
-  <h2>Dashboard setup</h2>
+  <h2>Connect your dashboard</h2>
   <p>Paste your Ticket Log relay's web app link (the same /exec URL the ticket form uses). It saves to this browser only, never to the code.</p>
   <div class="fld"><label>Relay web app URL (ends in /exec)</label><input id="sUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
   <div style="display:flex;gap:9px;margin-top:6px"><button class="btn primary" id="sSave">Save & connect</button></div>
-  <p class="hint" style="margin-top:14px">Tip: add <b>?mock=1</b> to the URL to preview the dashboard with sample data.</p>
+  <p class="hint" style="margin-top:14px">Tip: add <b>?mock=1</b> to the URL to preview with sample data.</p>
 </div>
 
 <!-- Ticket manage modal -->
@@ -118,7 +205,7 @@
   <div class="mh"><div><div class="t" id="tmTitle">Ticket</div><div class="id" id="tmId"></div></div><button class="mx" data-close>×</button></div>
   <div class="mb">
     <div class="kv" id="tmMeta"></div>
-    <div class="grid2">
+    <div class="gg2">
       <div class="fld"><label>Status</label><select id="tmStatus"></select></div>
       <div class="fld"><label>Owner</label><select id="tmOwner"></select></div>
     </div>
@@ -136,18 +223,32 @@ var OWNERS=['','Rommel','Ayen','Meg','Carlo','Brix','Alfie'];
 var CFG={ url: localStorage.getItem('td_url')||'' };
 var MOCK=/[?&]mock=1/.test(location.search);
 var TICKETS=[];
-var state={ tab:'tickets', q:'', status:'', owner:'', csa:'', cq:'', editTicket:null, editCsa:null };
+var state={ view:'overview', q:'', status:'', owner:'', csa:'', editTicket:null };
 var $=function(s){return document.querySelector(s);};
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2600);}
 function stCls(s){return 'st-'+String(s||'').replace(/[^A-Za-z]/g,'');}
-function priCls(p){return 'pri-'+String(p||'').replace(/[^A-Za-z]/g,'');}
+function priCls(p){return 'pri-'+String(p||'').replace(/[^A-Za-z0-9]/g,'');}
+function isOpen(t){return t.status!=='Resolved'&&t.status!=='Closed';}
+function pdate(s){ if(!s)return null; var d=new Date(String(s).replace(' ','T')); return isNaN(d)?null:d; }
+function now(){ return new Date(); }
 
-/* ---------- API (always POST text/plain: simple request, CORS-readable) ---------- */
+/* SLA: returns {kind:'over'|'risk'|'ok'|'', label} for an open ticket */
+function sla(t){
+  if(!isOpen(t)) return {kind:'',label:''};
+  var n=now(), risk=4*3600*1000;
+  var res=pdate(t.resolutionDue), fr=pdate(t.firstResponseDue);
+  if((res&&res<n) || (t.status==='New'&&fr&&fr<n)) return {kind:'over',label:'Overdue'};
+  var soonest=null;
+  [res,(t.status==='New'?fr:null)].forEach(function(d){ if(d&&d>=n){ if(soonest===null||d<soonest) soonest=d; } });
+  if(soonest!==null && (soonest-n)<=risk) return {kind:'risk',label:'Due soon'};
+  return {kind:'ok',label:'On track'};
+}
+
+/* ---------- API (GET reads, POST writes) ---------- */
 function api(action,params){
   if(MOCK) return mockApi(action,params);
-  // Reads go over GET (safe: never creates a ticket, and CORS-readable). Writes over POST.
-  if(action==='listTickets'||action==='listCsas'||action==='ping'){
+  if(action==='listTickets'||action==='ping'){
     var qs=Object.keys(params||{}).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k]);}).join('&');
     return fetch(CFG.url+'?action='+encodeURIComponent(action)+(qs?'&'+qs:''),{method:'GET'}).then(function(r){return r.json();});
   }
@@ -155,14 +256,15 @@ function api(action,params){
   return fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}).then(function(r){return r.json();});
 }
 
-/* ---------- boot ---------- */
+/* ---------- boot / nav ---------- */
 function boot(){
   if(!MOCK && !CFG.url){ $('#setup').style.display='block'; return; }
-  $('#app').style.display='block';
+  $('#app').style.display='flex';
   fillSelect($('#fStatus'),STATUSES,'All statuses');
   fillSelect($('#fOwner'),OWNERS.filter(Boolean),'All owners');
   fillSelect($('#tmStatus'),STATUSES,null);
   fillSelect($('#tmOwner'),OWNERS,null,true);
+  $('#setUrl').value=CFG.url;
   loadAll();
 }
 function fillSelect(sel,arr,allLabel,ownerBlank){
@@ -170,11 +272,63 @@ function fillSelect(sel,arr,allLabel,ownerBlank){
   h+=arr.map(function(v){return '<option value="'+esc(v)+'">'+(v===''?'(unassigned)':esc(v))+'</option>';}).join('');
   sel.innerHTML=h;
 }
+function setView(v){
+  state.view=v;
+  document.querySelectorAll('.navi').forEach(function(n){ n.classList.toggle('active',n.getAttribute('data-view')===v); });
+  $('#overviewView').style.display=v==='overview'?'':'none';
+  $('#ticketsView').style.display=v==='tickets'?'':'none';
+  $('#settingsView').style.display=v==='settings'?'':'none';
+}
 function loadAll(){
-  api('listTickets').then(function(r){ if(r&&r.ok){ TICKETS=r.tickets||[]; renderTickets(); refreshCsaFilter(); } else toast((r&&r.error)||'Failed to load tickets'); });
+  api('listTickets').then(function(r){
+    if(r&&r.ok){ TICKETS=r.tickets||[]; refreshCsaFilter(); renderOverview(); renderTickets(); }
+    else toast((r&&r.error)||'Failed to load tickets');
+  }).catch(function(){ toast('Could not reach the relay. Check the URL in Settings.'); });
 }
 
-/* ---------- tickets ---------- */
+/* ---------- OVERVIEW ---------- */
+function renderOverview(){
+  var open=TICKETS.filter(isOpen);
+  var byStatus={}; STATUSES.forEach(function(s){byStatus[s]=0;}); TICKETS.forEach(function(t){ if(byStatus[t.status]!==undefined) byStatus[t.status]++; });
+  var over=0,risk=0,ok=0,unassigned=0;
+  open.forEach(function(t){ var s=sla(t); if(s.kind==='over')over++; else if(s.kind==='risk')risk++; else ok++; if(!t.owner)unassigned++; });
+  // metric tiles
+  var tiles=[
+    {n:open.length,l:'Open tickets',cls:''},
+    {n:over,l:'Overdue (SLA)',cls:over?'red':''},
+    {n:unassigned,l:'Unassigned',cls:unassigned?'amber':''},
+    {n:byStatus['Waiting for CSA'],l:'Waiting for CSA',cls:''},
+    {n:byStatus['Resolved'],l:'Resolved',cls:'green'}
+  ];
+  $('#ovTiles').innerHTML=tiles.map(function(t){ return '<div class="tile click" data-goto="tickets"><div class="n '+t.cls+'">'+t.n+'</div><div class="l">'+esc(t.l)+'</div></div>'; }).join('');
+  $('#ovTiles').querySelectorAll('[data-goto]').forEach(function(e){ e.onclick=function(){ setView('tickets'); }; });
+  // priorities among open
+  var order=[['Urgent','#B42318'],['High','#DC6803'],['Medium','#CA8504'],['Low','#475467']];
+  var pc={}; open.forEach(function(t){ var p=t.priority||'Unset'; pc[p]=(pc[p]||0)+1; });
+  var mx=Math.max(1,Math.max.apply(null,order.map(function(o){return pc[o[0]]||0;}).concat([1])));
+  $('#ovPrio').innerHTML=order.map(function(o){ var c=pc[o[0]]||0; return '<div class="brow"><div class="bl">'+o[0]+'</div><div class="bar"><span style="width:'+Math.round(c/mx*100)+'%;background:'+o[1]+'"></span></div><div class="bn">'+c+'</div></div>'; }).join('')
+    + (pc['P1']||pc['P2']||pc['P3']||pc['P4'] ? '<p class="hint" style="margin-top:10px">Some tickets use P1–P4 priority codes; counted under matching bands.</p>':'');
+  // SLA boxes
+  $('#ovSla').innerHTML=
+    '<div class="slabox bad"><div class="n">'+over+'</div><div class="l">Overdue</div></div>'+
+    '<div class="slabox warn"><div class="n">'+risk+'</div><div class="l">Due soon (<4h)</div></div>'+
+    '<div class="slabox ok"><div class="n">'+ok+'</div><div class="l">On track</div></div>';
+  $('#ovSlaNote').textContent = over? (over+' ticket'+(over===1?'':'s')+' past SLA — clear these first.') : 'No tickets past SLA. Nice.';
+  // needs attention: overdue first, then unassigned, then due-soon; top 6
+  var scored=open.map(function(t){ var s=sla(t); var score=(s.kind==='over'?3:0)+(!t.owner?2:0)+(s.kind==='risk'?1:0); return {t:t,s:s,score:score}; })
+    .filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;}).slice(0,6);
+  var na=$('#ovNeeds');
+  if(!scored.length){ na.innerHTML='<div class="empty">Nothing needs attention right now.</div>'; }
+  else na.innerHTML=scored.map(function(x){ var t=x.t; var flags='';
+    if(x.s.kind==='over')flags+='<span class="flag over">Overdue</span> ';
+    else if(x.s.kind==='risk')flags+='<span class="flag risk">Due soon</span> ';
+    if(!t.owner)flags+='<span class="flag un">Unassigned</span>';
+    return '<div class="naitem" data-open="'+esc(t.ticketId)+'"><div class="grow"><div class="nm">'+esc(t.ticketId)+' · '+esc(t.title)+'</div><div class="sub">'+esc(t.csa||'')+(t.client?' · '+esc(t.client):'')+(t.priority?' · '+esc(t.priority):'')+'</div></div>'+flags+'</div>';
+  }).join('');
+  na.querySelectorAll('[data-open]').forEach(function(e){ e.onclick=function(){ openTicket(e.getAttribute('data-open')); }; });
+}
+
+/* ---------- TICKETS ---------- */
 function refreshCsaFilter(){ var names=[]; TICKETS.forEach(function(t){ if(t.csa&&names.indexOf(t.csa)<0) names.push(t.csa); }); names.sort(); fillSelect($('#fCsa'),names,'All CSAs'); }
 function ticketMatches(t){
   var term=state.q.trim().toLowerCase();
@@ -185,13 +339,10 @@ function ticketMatches(t){
   return true;
 }
 function renderTiles(){
-  var counts={}; STATUSES.forEach(function(s){counts[s]=0;});
-  TICKETS.forEach(function(t){ if(counts[t.status]!==undefined) counts[t.status]++; });
-  var open=TICKETS.filter(function(t){return t.status!=='Resolved'&&t.status!=='Closed';}).length;
+  var counts={}; STATUSES.forEach(function(s){counts[s]=0;}); TICKETS.forEach(function(t){ if(counts[t.status]!==undefined) counts[t.status]++; });
+  var open=TICKETS.filter(isOpen).length;
   var tiles=[['',open,'Open']].concat(STATUSES.map(function(s){return [s,counts[s],s];}));
-  $('#tiles').innerHTML=tiles.map(function(t){
-    return '<div class="tile'+(state.status===t[0]&&t[0]!==''?' on':'')+'" data-st="'+esc(t[0])+'"><div class="n">'+t[1]+'</div><div class="l">'+esc(t[2])+'</div></div>';
-  }).join('');
+  $('#tiles').innerHTML=tiles.map(function(t){ return '<div class="tile click" data-st="'+esc(t[0])+'"><div class="n">'+t[1]+'</div><div class="l">'+esc(t[2])+'</div></div>'; }).join('');
   $('#tiles').querySelectorAll('[data-st]').forEach(function(el){ el.onclick=function(){ state.status=el.getAttribute('data-st'); $('#fStatus').value=state.status; renderTickets(); }; });
 }
 function renderTickets(){
@@ -200,13 +351,15 @@ function renderTickets(){
   var tb=$('#trows');
   if(!list.length){ tb.innerHTML=''; $('#tempty').style.display=''; $('#tempty').textContent=TICKETS.length?'No tickets match your filters.':'No tickets yet.'; return; }
   $('#tempty').style.display='none';
-  tb.innerHTML=list.map(function(t){
+  tb.innerHTML=list.map(function(t){ var s=sla(t);
+    var slaHtml=s.kind==='over'?'<span class="flag over">Overdue</span>':s.kind==='risk'?'<span class="flag risk">Due soon</span>':s.kind==='ok'?'<span class="muted">On track</span>':'<span class="muted">—</span>';
     return '<tr>'+
       '<td><div class="tid">'+esc(t.ticketId)+'</div><div class="tt">'+esc(t.title)+'</div></td>'+
       '<td>'+esc(t.csa||'')+'<div class="tsub">'+esc(t.client||'')+'</div></td>'+
       '<td>'+(t.priority?'<span class="badge '+priCls(t.priority)+'">'+esc(t.priority)+'</span>':'<span class="muted">—</span>')+'</td>'+
       '<td>'+(t.owner?esc(t.owner):'<span class="muted">Unassigned</span>')+'</td>'+
       '<td><span class="badge '+stCls(t.status)+'">'+esc(t.status||'')+'</span></td>'+
+      '<td>'+slaHtml+'</td>'+
       '<td class="muted" style="white-space:nowrap">'+esc(t.lastUpdated||'')+'</td>'+
       '<td style="text-align:right"><button class="manage" data-id="'+esc(t.ticketId)+'">Manage</button></td>'+
     '</tr>';
@@ -221,7 +374,7 @@ function openTicket(id){
   $('#tmMeta').innerHTML=[
     ['Category',(t.category||'')+(t.subcategory?' / '+t.subcategory:'')],['Priority',t.priority||''],
     ['Impact',t.impact||''],['Submitted',t.submittedAt||''],['First response due',t.firstResponseDue||''],
-    ['Description',t.description||'']
+    ['Resolution due',t.resolutionDue||''],['Description',t.description||'']
   ].map(function(kv){return '<div class="k">'+esc(kv[0])+'</div><div>'+esc(kv[1]||'—')+'</div>';}).join('');
   $('#tmStatus').value=t.status||'New'; $('#tmOwner').value=t.owner||''; $('#tmNote').value=''; $('#tmState').textContent='';
   $('#tov').classList.add('show');
@@ -238,37 +391,41 @@ function saveTicket(){
 }
 
 /* ---------- wire ---------- */
+document.querySelectorAll('.navi').forEach(function(n){ n.onclick=function(){ setView(n.getAttribute('data-view')); }; });
+$('#ovGoTickets').onclick=function(){ setView('tickets'); };
+$('#ovSeeAll').onclick=function(){ setView('tickets'); };
+$('#ovRefresh').onclick=loadAll;
+$('#tkRefresh').onclick=loadAll;
 $('#q').addEventListener('input',function(){state.q=this.value;renderTickets();});
 $('#fStatus').addEventListener('change',function(){state.status=this.value;renderTickets();});
 $('#fOwner').addEventListener('change',function(){state.owner=this.value;renderTickets();});
 $('#fCsa').addEventListener('change',function(){state.csa=this.value;renderTickets();});
-$('#refresh').onclick=loadAll;
-$('#settings').onclick=function(){ $('#sUrl').value=CFG.url; $('#app').style.display='none'; $('#setup').style.display='block'; };
 $('#tmSave').onclick=saveTicket;
 document.querySelectorAll('[data-close]').forEach(function(b){ b.onclick=function(){ b.closest('.ov').classList.remove('show'); }; });
 document.querySelectorAll('.ov').forEach(function(o){ o.addEventListener('click',function(e){ if(e.target===o) o.classList.remove('show'); }); });
-$('#sSave').onclick=function(){
-  var u=$('#sUrl').value.trim();
-  if(!u){ alert('The relay web app URL is required.'); return; }
-  localStorage.setItem('td_url',u); CFG.url=u;
-  $('#setup').style.display='none'; boot();
-};
+function saveUrl(u){ if(!u){ alert('The relay web app URL is required.'); return false; } localStorage.setItem('td_url',u); CFG.url=u; return true; }
+$('#sSave').onclick=function(){ if(saveUrl($('#sUrl').value.trim())){ $('#setup').style.display='none'; boot(); } };
+$('#setSave').onclick=function(){ if(saveUrl($('#setUrl').value.trim())){ $('#setState').textContent='Connected.'; loadAll(); } };
 
-/* ---------- mock data (preview only, ?mock=1) ---------- */
+/* ---------- mock (preview only) ---------- */
 function mockApi(action,params){
   return new Promise(function(res){ setTimeout(function(){
     if(action==='listTickets') res({ok:true,tickets:MOCK_T});
     else if(action==='updateTicket'){ var t=MOCK_T.filter(function(x){return x.ticketId===params.ticketId;})[0]; var ch=false;
-      if(t){ if(params.status&&params.status!==t.status){t.status=params.status;ch=true;} if(params.owner!==undefined&&params.owner!==t.owner){t.owner=params.owner;ch=true;} if(params.note)ch=true; t.lastUpdated='2026-08-17 14:30'; }
+      if(t){ if(params.status&&params.status!==t.status){t.status=params.status;ch=true;} if(params.owner!==undefined&&params.owner!==t.owner){t.owner=params.owner;ch=true;} if(params.note)ch=true; }
       res({ok:true,changed:ch}); }
     else res({ok:true});
-  },180); });
+  },160); });
 }
+function iso(daysFromNow,h){ var d=new Date(); d.setDate(d.getDate()+daysFromNow); d.setHours(h||9,0,0,0);
+  function p(n){return (n<10?'0':'')+n;} return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':00'; }
 var MOCK_T=[
-  {row:2,ticketId:'MAVIS-0001',submittedAt:'2026-08-15 09:12',csa:'Rose Ann Bocado',client:'THE NYBB GROUP, LLC.',category:'Integration',subcategory:'Google Sheets',title:'Sheet not syncing to dashboard',description:'The campaign sheet stopped updating this morning.',impact:'Medium',priority:'High',owner:'',status:'New',firstResponseDue:'2026-08-15 13:00',lastUpdated:'2026-08-15 09:12'},
-  {row:3,ticketId:'MAVIS-0002',submittedAt:'2026-08-15 10:40',csa:'Matthew Conopio',client:'Structural Prime Builder INC',category:'Access',subcategory:'Login',title:'Cannot log into MAVIS',description:'Password reset loop.',impact:'High',priority:'Urgent',owner:'Rommel',status:'In Progress',firstResponseDue:'2026-08-15 12:00',lastUpdated:'2026-08-15 11:05'},
-  {row:4,ticketId:'MAVIS-0003',submittedAt:'2026-08-16 08:05',csa:'Ericka Meged',client:'CoastalPay',category:'Reporting',subcategory:'Residuals',title:'Residual numbers look off',description:'August residuals seem low vs July.',impact:'Low',priority:'Medium',owner:'Meg',status:'Waiting for CSA',firstResponseDue:'2026-08-16 12:00',lastUpdated:'2026-08-16 09:20'},
-  {row:5,ticketId:'MAVIS-0004',submittedAt:'2026-08-16 15:22',csa:'Lou Angus',client:'Dornerland',category:'Automation',subcategory:'Workflow',title:'Onboarding email not firing',description:'New client did not get the welcome email.',impact:'Medium',priority:'High',owner:'Carlo',status:'Resolved',firstResponseDue:'2026-08-16 18:00',lastUpdated:'2026-08-17 08:00'}
+  {ticketId:'MAVIS-0001',submittedAt:iso(-1,9),csa:'Rose Ann Bocado',client:'THE NYBB GROUP, LLC.',category:'Integration',subcategory:'Google Sheets',title:'Sheet not syncing to dashboard',description:'The campaign sheet stopped updating this morning.',impact:'Medium',priority:'High',owner:'',status:'New',firstResponseDue:iso(-1,13),resolutionDue:iso(0,18),lastUpdated:iso(-1,9)},
+  {ticketId:'MAVIS-0002',submittedAt:iso(-1,10),csa:'Matthew Conopio',client:'Structural Prime Builder INC',category:'Access',subcategory:'Login',title:'Cannot log into MAVIS',description:'Password reset loop.',impact:'High',priority:'Urgent',owner:'Rommel',status:'In Progress',firstResponseDue:iso(-1,12),resolutionDue:iso(-1,16),lastUpdated:iso(-1,11)},
+  {ticketId:'MAVIS-0003',submittedAt:iso(0,8),csa:'Ericka Meged',client:'CoastalPay',category:'Reporting',subcategory:'Residuals',title:'Residual numbers look off',description:'August residuals seem low vs July.',impact:'Low',priority:'Medium',owner:'Meg',status:'Waiting for CSA',firstResponseDue:iso(0,12),resolutionDue:iso(1,17),lastUpdated:iso(0,9)},
+  {ticketId:'MAVIS-0004',submittedAt:iso(0,10),csa:'Lou Angus',client:'Dornerland',category:'Automation',subcategory:'Workflow',title:'Onboarding email not firing',description:'New client did not get the welcome email.',impact:'Medium',priority:'High',owner:'',status:'New',firstResponseDue:iso(0,14),resolutionDue:iso(0,20),lastUpdated:iso(0,10)},
+  {ticketId:'MAVIS-0005',submittedAt:iso(-2,9),csa:'Kean Sanidad',client:'Souk Systems',category:'Billing',subcategory:'Invoice',title:'Duplicate invoice sent to client',description:'Client received two invoices.',impact:'High',priority:'Urgent',owner:'Carlo',status:'Resolved',firstResponseDue:iso(-2,11),resolutionDue:iso(-1,15),lastUpdated:iso(-1,15)},
+  {ticketId:'MAVIS-0006',submittedAt:iso(0,7),csa:'Anna Macaya',client:'ATS Group',category:'Question',subcategory:'How-to',title:'How do I export the weekly report?',description:'Need steps to export.',impact:'Low',priority:'Low',owner:'',status:'New',firstResponseDue:iso(0,15),resolutionDue:iso(2,17),lastUpdated:iso(0,7)}
 ];
 boot();
 </script>
