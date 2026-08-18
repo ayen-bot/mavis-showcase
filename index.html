@@ -5780,8 +5780,35 @@ $('#askIn').addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ askRoute($('#
     g("tkBody").scrollTop=0;
   }
 
+  /* ---------- live roster: pull CSAs + schedules from the CSA Schedule sheet via the relay ---------- */
+  /* GET is safe (it never creates a ticket). Older relays return plain text, so we keep the built-in roster. */
+  function refreshAssignments(){
+    if(!TICKET_LOG_URL) return;
+    try{
+      fetch(TICKET_LOG_URL+"?action=listCsas",{method:"GET"})
+        .then(function(r){return r.text();})
+        .then(function(t){
+          var j; try{ j=JSON.parse(t); }catch(e){ return; }
+          if(!j||!j.ok||!j.csas||!j.csas.length) return;
+          var mapped=j.csas.map(function(c){
+            return { csa:String(c.name||"").trim(), client:String(c.campaign||"").trim(),
+                     setup:String(c.setup||"").trim()||"Part time",
+                     days:[c.mon,c.tue,c.wed,c.thu,c.fri].map(function(x){return String(x==null?"":x).trim();}) };
+          }).filter(function(a){ return a.csa && a.client; });
+          if(!mapped.length) return;
+          ASSIGNMENTS=mapped;
+          var sel=g("tkCsa");
+          if(sel){ var cur=sel.value, names=uniqueCSAs();
+            sel.innerHTML='<option value="">Select your name</option>'+names.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join("");
+            if(cur && names.indexOf(cur)>=0) sel.value=cur;
+          }
+        })
+        .catch(function(){});
+    }catch(e){}
+  }
+
   /* ---------- open / close ---------- */
-  function openTicket(){ resetForm(); var bg=g("tkBg"),p=g("tkPanel"); bg.classList.add("open"); p.classList.add("open"); p.setAttribute("aria-hidden","false"); document.body.style.overflow="hidden"; }
+  function openTicket(){ resetForm(); refreshAssignments(); var bg=g("tkBg"),p=g("tkPanel"); bg.classList.add("open"); p.classList.add("open"); p.setAttribute("aria-hidden","false"); document.body.style.overflow="hidden"; }
   function closeTicket(){ var bg=g("tkBg"),p=g("tkPanel"),rd=g("tkReader"); bg.classList.remove("open"); p.classList.remove("open"); p.setAttribute("aria-hidden","true"); if(rd){rd.classList.remove("open");rd.innerHTML="";} document.body.style.overflow=""; if(countdownTimer)clearInterval(countdownTimer); }
   g("tkBg").addEventListener("click",closeTicket);
   g("tkClose").addEventListener("click",closeTicket);
@@ -5791,6 +5818,7 @@ $('#askIn').addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ askRoute($('#
   function rewire(){ var b=g("askCsaBtn"); if(b){ b.onclick=function(ev){ if(ev)ev.preventDefault(); openTicket(); }; } }
   rewire();
   setTimeout(rewire,0);
+  refreshAssignments();
   window.openCsaTicket=openTicket;
 })();
 </script>
