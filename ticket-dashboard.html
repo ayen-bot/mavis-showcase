@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket Dashboard · CSA Knowledge Hub</title>
+<style>
+  :root{
+    --bg:#F6F7F9;--panel:#FFF;--line:#E7E9EE;--line2:#EEF0F4;--ink:#111827;--ink2:#374151;--muted:#6B7280;--faint:#9CA3AF;
+    --brand:#4F46E5;--brand-soft:#EEF0FF;--brand-ink:#4338CA;--shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06);
+    --shadow2:0 8px 30px rgba(16,24,40,.12);--radius:12px;
+    --green:#067647;--green-bg:#ECFDF3;--green-bd:#ABEFC6;--blue:#175CD3;--blue-bg:#EFF8FF;--blue-bd:#B2DDFF;
+    --red:#B42318;--red-bg:#FEF3F2;--red-bd:#FECDCA;--amber:#B54708;--amber-bg:#FFFAEB;--amber-bd:#FEDF89;
+    --purple:#6941C6;--purple-bg:#F4F3FF;--purple-bd:#D9D6FE;--gray:#475467;--gray-bg:#F2F4F7;--gray-bd:#E4E7EC;
+  }
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5}
+  .wrap{max-width:1200px;margin:0 auto;padding:24px 22px 56px}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#4F46E5,#7C6CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800}
+  h1{margin:0;font-size:22px;letter-spacing:-.02em}.sub{margin:2px 0 0;color:var(--muted);font-size:13px}
+  .btn{border:1px solid var(--line);background:var(--panel);color:var(--ink2);font-weight:600;font-size:13px;padding:9px 14px;border-radius:9px;cursor:pointer;transition:.14s}
+  .btn:hover{background:var(--line2)}.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}.btn.primary:hover{filter:brightness(1.06)}
+  .btn.ghost{background:transparent}
+  .tabs{display:flex;gap:6px;margin:18px 0 16px;border-bottom:1px solid var(--line)}
+  .tab{border:0;background:transparent;padding:10px 14px;font-weight:650;font-size:14px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.active{color:var(--brand-ink);border-bottom-color:var(--brand)}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px 14px;box-shadow:var(--shadow);cursor:pointer;transition:.14s}
+  .tile:hover{border-color:#d3d7e0}.tile.on{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+  .tile .n{font-size:22px;font-weight:800}.tile .l{font-size:12px;color:var(--muted);margin-top:2px}
+  .toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .search{position:relative;flex:1;min-width:220px}
+  .search input{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px 10px 36px;font-size:14px;background:#fff}
+  .search input:focus{outline:none;border-color:#C7C9F7;box-shadow:0 0 0 3px var(--brand-soft)}
+  .search .si{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--faint)}
+  select.filt{appearance:none;border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 30px 9px 12px;font-size:13px;color:var(--ink2);font-weight:600;cursor:pointer;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 11px center}
+  .tablewrap{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:auto}
+  table{width:100%;border-collapse:collapse;min-width:720px}
+  thead th{text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:12px 14px;background:#FbFbFC;border-bottom:1px solid var(--line);white-space:nowrap}
+  tbody td{padding:12px 14px;border-bottom:1px solid var(--line2);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#FbFbFD}
+  .tid{font-weight:700;color:var(--brand-ink);font-variant-numeric:tabular-nums}
+  .tt{font-weight:640}.tsub{color:var(--muted);font-size:12px;margin-top:2px}
+  .badge{display:inline-flex;align-items:center;font-size:11.5px;font-weight:650;padding:3px 10px;border-radius:15px;border:1px solid;white-space:nowrap}
+  .st-New{color:var(--blue);background:var(--blue-bg);border-color:var(--blue-bd)}
+  .st-InProgress{color:var(--amber);background:var(--amber-bg);border-color:var(--amber-bd)}
+  .st-WaitingforCSA{color:var(--purple);background:var(--purple-bg);border-color:var(--purple-bd)}
+  .st-Resolved{color:var(--green);background:var(--green-bg);border-color:var(--green-bd)}
+  .st-Closed{color:var(--gray);background:var(--gray-bg);border-color:var(--gray-bd)}
+  .pri-High,.pri-Urgent,.pri-Critical{color:var(--red);background:var(--red-bg);border-color:var(--red-bd)}
+  .pri-Medium{color:var(--amber);background:var(--amber-bg);border-color:var(--amber-bd)}
+  .pri-Low{color:var(--gray);background:var(--gray-bg);border-color:var(--gray-bd)}
+  .manage{border:1px solid var(--line);background:#fff;color:var(--brand-ink);font-weight:650;font-size:12.5px;padding:7px 12px;border-radius:8px;cursor:pointer}
+  .manage:hover{background:var(--brand-soft);border-color:#C7C9F7}
+  .muted{color:var(--muted)}.empty{padding:40px;text-align:center;color:var(--muted)}
+  /* modal / drawer */
+  .ov{position:fixed;inset:0;background:rgba(16,24,40,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}
+  .ov.show{display:flex}
+  .modal{background:#fff;border-radius:14px;box-shadow:var(--shadow2);width:100%;max-width:540px;max-height:92vh;overflow:auto}
+  .mh{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .mh .t{font-weight:750;font-size:16px}.mh .id{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .mx{border:0;background:transparent;font-size:22px;color:var(--faint);cursor:pointer;line-height:1}
+  .mb{padding:18px 20px}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:13px;margin-bottom:14px}
+  .kv .k{color:var(--muted)}
+  .fld{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
+  .fld label{font-size:12px;font-weight:700;color:var(--ink2)}
+  .fld input,.fld select,.fld textarea{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13.5px;background:#fff;font-family:inherit}
+  .fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:#C7C9F7;box-shadow:0 0 0 3px var(--brand-soft)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .mf{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:9px}
+  .mf .right{display:flex;gap:9px}
+  .hint{font-size:12px;color:var(--muted)}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:11px 18px;border-radius:10px;font-size:13.5px;box-shadow:var(--shadow2);opacity:0;pointer-events:none;transition:.25s;z-index:80}
+  .toast.show{opacity:1}
+  /* setup */
+  .setup{max-width:520px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:26px}
+  .setup h2{margin:0 0 6px}.setup p{color:var(--muted);margin:0 0 18px;font-size:13.5px}
+  .del{color:var(--red);border-color:var(--red-bd)}
+  @media(max-width:640px){ .kv{grid-template-columns:1fr} .grid2{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap" id="app" style="display:none">
+  <div class="top">
+    <div class="brand"><div class="logo">CS</div><div><h1>Ticket Dashboard</h1><div class="sub">Manage and monitor tickets. Changes sync to the live sheet and notify the reporting CSA.</div></div></div>
+    <div style="display:flex;gap:9px"><button class="btn ghost" id="refresh">↻ Refresh</button><button class="btn ghost" id="settings">Settings</button></div>
+  </div>
+  <div id="ticketsView">
+    <div class="tiles" id="tiles"></div>
+    <div class="toolbar">
+      <div class="search"><span class="si">🔍</span><input id="q" placeholder="Search ticket, title, CSA, client..."></div>
+      <select class="filt" id="fStatus"><option value="">All statuses</option></select>
+      <select class="filt" id="fOwner"><option value="">All owners</option></select>
+      <select class="filt" id="fCsa"><option value="">All CSAs</option></select>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Ticket</th><th>CSA / Client</th><th>Priority</th><th>Owner</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+      <tbody id="trows"></tbody></table><div class="empty" id="tempty" style="display:none"></div></div>
+  </div>
+
+  </div>
+</div>
+
+<!-- Setup -->
+<div class="setup" id="setup" style="display:none">
+  <h2>Dashboard setup</h2>
+  <p>Paste your Ticket Log relay's web app link (the same /exec URL the ticket form uses). It saves to this browser only, never to the code.</p>
+  <div class="fld"><label>Relay web app URL (ends in /exec)</label><input id="sUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
+  <div style="display:flex;gap:9px;margin-top:6px"><button class="btn primary" id="sSave">Save & connect</button></div>
+  <p class="hint" style="margin-top:14px">Tip: add <b>?mock=1</b> to the URL to preview the dashboard with sample data.</p>
+</div>
+
+<!-- Ticket manage modal -->
+<div class="ov" id="tov"><div class="modal">
+  <div class="mh"><div><div class="t" id="tmTitle">Ticket</div><div class="id" id="tmId"></div></div><button class="mx" data-close>×</button></div>
+  <div class="mb">
+    <div class="kv" id="tmMeta"></div>
+    <div class="grid2">
+      <div class="fld"><label>Status</label><select id="tmStatus"></select></div>
+      <div class="fld"><label>Owner</label><select id="tmOwner"></select></div>
+    </div>
+    <div class="fld"><label>Update note (optional — sent to the CSA)</label><textarea id="tmNote" rows="2" placeholder="e.g. Looking into this now, will update by EOD"></textarea></div>
+    <p class="hint">Saving updates the ticket in the sheet and pings the original reporting CSA in Chat, just like a hand-edit.</p>
+  </div>
+  <div class="mf"><span class="hint" id="tmState"></span><div class="right"><button class="btn" data-close>Cancel</button><button class="btn primary" id="tmSave">Save & notify</button></div></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var STATUSES=['New','In Progress','Waiting for CSA','Resolved','Closed'];
+var OWNERS=['','Rommel','Ayen','Meg','Carlo','Brix','Alfie'];
+var CFG={ url: localStorage.getItem('td_url')||'' };
+var MOCK=/[?&]mock=1/.test(location.search);
+var TICKETS=[];
+var state={ tab:'tickets', q:'', status:'', owner:'', csa:'', cq:'', editTicket:null, editCsa:null };
+var $=function(s){return document.querySelector(s);};
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2600);}
+function stCls(s){return 'st-'+String(s||'').replace(/[^A-Za-z]/g,'');}
+function priCls(p){return 'pri-'+String(p||'').replace(/[^A-Za-z]/g,'');}
+
+/* ---------- API (always POST text/plain: simple request, CORS-readable) ---------- */
+function api(action,params){
+  if(MOCK) return mockApi(action,params);
+  // Reads go over GET (safe: never creates a ticket, and CORS-readable). Writes over POST.
+  if(action==='listTickets'||action==='listCsas'||action==='ping'){
+    var qs=Object.keys(params||{}).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k]);}).join('&');
+    return fetch(CFG.url+'?action='+encodeURIComponent(action)+(qs?'&'+qs:''),{method:'GET'}).then(function(r){return r.json();});
+  }
+  var body=Object.assign({action:action},params||{});
+  return fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}).then(function(r){return r.json();});
+}
+
+/* ---------- boot ---------- */
+function boot(){
+  if(!MOCK && !CFG.url){ $('#setup').style.display='block'; return; }
+  $('#app').style.display='block';
+  fillSelect($('#fStatus'),STATUSES,'All statuses');
+  fillSelect($('#fOwner'),OWNERS.filter(Boolean),'All owners');
+  fillSelect($('#tmStatus'),STATUSES,null);
+  fillSelect($('#tmOwner'),OWNERS,null,true);
+  loadAll();
+}
+function fillSelect(sel,arr,allLabel,ownerBlank){
+  if(!sel) return; var h=allLabel!=null?'<option value="">'+esc(allLabel)+'</option>':'';
+  h+=arr.map(function(v){return '<option value="'+esc(v)+'">'+(v===''?'(unassigned)':esc(v))+'</option>';}).join('');
+  sel.innerHTML=h;
+}
+function loadAll(){
+  api('listTickets').then(function(r){ if(r&&r.ok){ TICKETS=r.tickets||[]; renderTickets(); refreshCsaFilter(); } else toast((r&&r.error)||'Failed to load tickets'); });
+}
+
+/* ---------- tickets ---------- */
+function refreshCsaFilter(){ var names=[]; TICKETS.forEach(function(t){ if(t.csa&&names.indexOf(t.csa)<0) names.push(t.csa); }); names.sort(); fillSelect($('#fCsa'),names,'All CSAs'); }
+function ticketMatches(t){
+  var term=state.q.trim().toLowerCase();
+  if(term){ var hay=(t.ticketId+' '+t.title+' '+t.csa+' '+t.client+' '+t.category).toLowerCase(); if(hay.indexOf(term)<0) return false; }
+  if(state.status && t.status!==state.status) return false;
+  if(state.owner && (t.owner||'')!==state.owner) return false;
+  if(state.csa && t.csa!==state.csa) return false;
+  return true;
+}
+function renderTiles(){
+  var counts={}; STATUSES.forEach(function(s){counts[s]=0;});
+  TICKETS.forEach(function(t){ if(counts[t.status]!==undefined) counts[t.status]++; });
+  var open=TICKETS.filter(function(t){return t.status!=='Resolved'&&t.status!=='Closed';}).length;
+  var tiles=[['',open,'Open']].concat(STATUSES.map(function(s){return [s,counts[s],s];}));
+  $('#tiles').innerHTML=tiles.map(function(t){
+    return '<div class="tile'+(state.status===t[0]&&t[0]!==''?' on':'')+'" data-st="'+esc(t[0])+'"><div class="n">'+t[1]+'</div><div class="l">'+esc(t[2])+'</div></div>';
+  }).join('');
+  $('#tiles').querySelectorAll('[data-st]').forEach(function(el){ el.onclick=function(){ state.status=el.getAttribute('data-st'); $('#fStatus').value=state.status; renderTickets(); }; });
+}
+function renderTickets(){
+  renderTiles();
+  var list=TICKETS.filter(ticketMatches);
+  var tb=$('#trows');
+  if(!list.length){ tb.innerHTML=''; $('#tempty').style.display=''; $('#tempty').textContent=TICKETS.length?'No tickets match your filters.':'No tickets yet.'; return; }
+  $('#tempty').style.display='none';
+  tb.innerHTML=list.map(function(t){
+    return '<tr>'+
+      '<td><div class="tid">'+esc(t.ticketId)+'</div><div class="tt">'+esc(t.title)+'</div></td>'+
+      '<td>'+esc(t.csa||'')+'<div class="tsub">'+esc(t.client||'')+'</div></td>'+
+      '<td>'+(t.priority?'<span class="badge '+priCls(t.priority)+'">'+esc(t.priority)+'</span>':'<span class="muted">—</span>')+'</td>'+
+      '<td>'+(t.owner?esc(t.owner):'<span class="muted">Unassigned</span>')+'</td>'+
+      '<td><span class="badge '+stCls(t.status)+'">'+esc(t.status||'')+'</span></td>'+
+      '<td class="muted" style="white-space:nowrap">'+esc(t.lastUpdated||'')+'</td>'+
+      '<td style="text-align:right"><button class="manage" data-id="'+esc(t.ticketId)+'">Manage</button></td>'+
+    '</tr>';
+  }).join('');
+  tb.querySelectorAll('[data-id]').forEach(function(b){ b.onclick=function(){ openTicket(b.getAttribute('data-id')); }; });
+}
+function openTicket(id){
+  var t=TICKETS.filter(function(x){return String(x.ticketId)===String(id);})[0]; if(!t) return;
+  state.editTicket=t;
+  $('#tmTitle').textContent=t.title||'Ticket';
+  $('#tmId').textContent=t.ticketId+'  ·  reported by '+(t.csa||'—')+' ('+(t.client||'')+')';
+  $('#tmMeta').innerHTML=[
+    ['Category',(t.category||'')+(t.subcategory?' / '+t.subcategory:'')],['Priority',t.priority||''],
+    ['Impact',t.impact||''],['Submitted',t.submittedAt||''],['First response due',t.firstResponseDue||''],
+    ['Description',t.description||'']
+  ].map(function(kv){return '<div class="k">'+esc(kv[0])+'</div><div>'+esc(kv[1]||'—')+'</div>';}).join('');
+  $('#tmStatus').value=t.status||'New'; $('#tmOwner').value=t.owner||''; $('#tmNote').value=''; $('#tmState').textContent='';
+  $('#tov').classList.add('show');
+}
+function saveTicket(){
+  var t=state.editTicket; if(!t) return;
+  var payload={ ticketId:t.ticketId, status:$('#tmStatus').value, owner:$('#tmOwner').value, note:$('#tmNote').value.trim() };
+  $('#tmState').textContent='Saving...'; $('#tmSave').disabled=true;
+  api('updateTicket',payload).then(function(r){
+    $('#tmSave').disabled=false;
+    if(r&&r.ok){ $('#tov').classList.remove('show'); toast(r.changed?'Saved. CSA notified.':'No changes to save.'); loadAll(); }
+    else { $('#tmState').textContent=(r&&r.error)||'Save failed'; }
+  }).catch(function(){ $('#tmSave').disabled=false; $('#tmState').textContent='Network error'; });
+}
+
+/* ---------- wire ---------- */
+$('#q').addEventListener('input',function(){state.q=this.value;renderTickets();});
+$('#fStatus').addEventListener('change',function(){state.status=this.value;renderTickets();});
+$('#fOwner').addEventListener('change',function(){state.owner=this.value;renderTickets();});
+$('#fCsa').addEventListener('change',function(){state.csa=this.value;renderTickets();});
+$('#refresh').onclick=loadAll;
+$('#settings').onclick=function(){ $('#sUrl').value=CFG.url; $('#app').style.display='none'; $('#setup').style.display='block'; };
+$('#tmSave').onclick=saveTicket;
+document.querySelectorAll('[data-close]').forEach(function(b){ b.onclick=function(){ b.closest('.ov').classList.remove('show'); }; });
+document.querySelectorAll('.ov').forEach(function(o){ o.addEventListener('click',function(e){ if(e.target===o) o.classList.remove('show'); }); });
+$('#sSave').onclick=function(){
+  var u=$('#sUrl').value.trim();
+  if(!u){ alert('The relay web app URL is required.'); return; }
+  localStorage.setItem('td_url',u); CFG.url=u;
+  $('#setup').style.display='none'; boot();
+};
+
+/* ---------- mock data (preview only, ?mock=1) ---------- */
+function mockApi(action,params){
+  return new Promise(function(res){ setTimeout(function(){
+    if(action==='listTickets') res({ok:true,tickets:MOCK_T});
+    else if(action==='updateTicket'){ var t=MOCK_T.filter(function(x){return x.ticketId===params.ticketId;})[0]; var ch=false;
+      if(t){ if(params.status&&params.status!==t.status){t.status=params.status;ch=true;} if(params.owner!==undefined&&params.owner!==t.owner){t.owner=params.owner;ch=true;} if(params.note)ch=true; t.lastUpdated='2026-08-17 14:30'; }
+      res({ok:true,changed:ch}); }
+    else res({ok:true});
+  },180); });
+}
+var MOCK_T=[
+  {row:2,ticketId:'MAVIS-0001',submittedAt:'2026-08-15 09:12',csa:'Rose Ann Bocado',client:'THE NYBB GROUP, LLC.',category:'Integration',subcategory:'Google Sheets',title:'Sheet not syncing to dashboard',description:'The campaign sheet stopped updating this morning.',impact:'Medium',priority:'High',owner:'',status:'New',firstResponseDue:'2026-08-15 13:00',lastUpdated:'2026-08-15 09:12'},
+  {row:3,ticketId:'MAVIS-0002',submittedAt:'2026-08-15 10:40',csa:'Matthew Conopio',client:'Structural Prime Builder INC',category:'Access',subcategory:'Login',title:'Cannot log into MAVIS',description:'Password reset loop.',impact:'High',priority:'Urgent',owner:'Rommel',status:'In Progress',firstResponseDue:'2026-08-15 12:00',lastUpdated:'2026-08-15 11:05'},
+  {row:4,ticketId:'MAVIS-0003',submittedAt:'2026-08-16 08:05',csa:'Ericka Meged',client:'CoastalPay',category:'Reporting',subcategory:'Residuals',title:'Residual numbers look off',description:'August residuals seem low vs July.',impact:'Low',priority:'Medium',owner:'Meg',status:'Waiting for CSA',firstResponseDue:'2026-08-16 12:00',lastUpdated:'2026-08-16 09:20'},
+  {row:5,ticketId:'MAVIS-0004',submittedAt:'2026-08-16 15:22',csa:'Lou Angus',client:'Dornerland',category:'Automation',subcategory:'Workflow',title:'Onboarding email not firing',description:'New client did not get the welcome email.',impact:'Medium',priority:'High',owner:'Carlo',status:'Resolved',firstResponseDue:'2026-08-16 18:00',lastUpdated:'2026-08-17 08:00'}
+];
+boot();
+</script>
+</body>
+</html>
