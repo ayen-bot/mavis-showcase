@@ -29,6 +29,7 @@ const VIEWS = [
   ['prospecting','Prospecting & Lead Gen','◎'],
   ['va','VA Toolkit','☰'],
   ['csatech','CSA Tech Manager','⚠'],
+  ['mytickets','Ticket Log','🎫'],
   ['apibanks','API Banks','⛃'],
 ];
 const state = { view:'live', scope:'all', activeId:null, autoReveal:false };
@@ -39,7 +40,7 @@ const PAGE_TITLES = {
   links:'Links Bank',
   live:'Live MAVIS Analysis', sim:'MAVIS Simulator', deliverables:'What MAVIS Can Do',
   tools:'Tools', csa:'CSA', prospecting:'Prospecting & Lead Gen', va:'VA Toolkit',
-  csatech:'CSA Tech Manager', apibanks:'API Banks', catalog:'Integration Library',
+  csatech:'CSA Tech Manager', mytickets:'Ticket Log', apibanks:'API Banks', catalog:'Integration Library',
   discover:'Search', overview:'Overview', workflows:'Workflows', opportunities:'Opportunities',
   impact:'Impact', roadmap:'Roadmap',
 };
@@ -406,6 +407,154 @@ function runDiscovery(q){
   if(!discActive){ discActive=true; discPrev=(state.view==='discover'?discPrev:state.view)||'live'; }
   discQ=q; state.view='discover'; render();
 }
+/* ============ My Tickets — read-only view of a CSA's own submitted tickets ============
+   Pulls live from the ticket relay (TICKET_LOG_URL, defined in the page). Read-only:
+   no edit/manage controls. CSAs pick their name and see only their own tickets, with
+   status + resolution updates from the Tech Team reflected automatically on refresh. */
+var MT_STATUSES=['New','In Progress','Waiting for CSA','Resolved','Closed'];
+var mtState={ csa:'', q:'', status:'', tickets:[], loaded:false, loading:false, err:'' };
+try{ mtState.csa=localStorage.getItem('mt_csa')||''; }catch(e){}
+function mtInjectCss(){
+  if(document.getElementById('mtCss')) return;
+  var css=`
+  .mtWrap{max-width:1100px}
+  .mtHead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+  .mtTitle{margin:0;font-size:26px;letter-spacing:-.02em;color:var(--ink)}
+  .mtSub{margin:6px 0 0;color:var(--muted);font-size:14px;max-width:640px;line-height:1.5}
+  .mtBtn{border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600;font-size:13px;padding:9px 14px;border-radius:9px;cursor:pointer}
+  .mtBtn:hover{background:var(--surface2)}
+  .mtBar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .mtSel{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:10px 30px 10px 12px;font-size:13.5px;font-weight:600;cursor:pointer;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 11px center}
+  .mtSearch{position:relative;flex:1;min-width:220px}
+  .mtSearch input{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:10px 12px 10px 34px;font-size:14px}
+  .mtSearch span{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:.6}
+  .mtStats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .mtStat{border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:10px 14px;min-width:92px}
+  .mtStat .n{font-size:20px;font-weight:800;color:var(--ink);line-height:1}
+  .mtStat .l{font-size:11.5px;color:var(--muted);margin-top:4px}
+  .mtWrapT{overflow:auto;border:1px solid var(--line);border-radius:12px}
+  .mtTable{width:100%;border-collapse:collapse;background:var(--surface);min-width:640px}
+  .mtTable th{text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:12px 14px;background:var(--surface2);border-bottom:1px solid var(--line);white-space:nowrap}
+  .mtTable td{padding:12px 14px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle;font-size:13.5px}
+  .mtTable tr:last-child td{border-bottom:0}
+  .mtTable tbody tr{cursor:pointer}
+  .mtTable tbody tr:hover{background:var(--surface2)}
+  .mtId{font-weight:700;color:#2E6BFF}
+  .mtTt{font-weight:600;margin-top:1px}
+  .mtBadge{display:inline-flex;align-items:center;font-size:11.5px;font-weight:650;padding:3px 10px;border-radius:15px;border:1px solid;white-space:nowrap}
+  .mtb-new{color:#2563EB;background:rgba(37,99,235,.12);border-color:rgba(37,99,235,.32)}
+  .mtb-prog{color:#B45309;background:rgba(245,158,11,.16);border-color:rgba(245,158,11,.34)}
+  .mtb-wait{color:#7C3AED;background:rgba(124,58,237,.14);border-color:rgba(124,58,237,.34)}
+  .mtb-res{color:#047857;background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.34)}
+  .mtb-closed{color:#475569;background:rgba(100,116,139,.16);border-color:rgba(100,116,139,.32)}
+  .mtb-hi{color:#B42318;background:rgba(220,45,32,.12);border-color:rgba(220,45,32,.32)}
+  .mtb-md{color:#B45309;background:rgba(245,158,11,.16);border-color:rgba(245,158,11,.34)}
+  .mtb-lo{color:#475569;background:rgba(100,116,139,.16);border-color:rgba(100,116,139,.32)}
+  .mtEmpty{padding:34px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:12px;background:var(--surface)}
+  .mtOv{position:fixed;inset:0;background:rgba(2,6,23,.55);display:none;align-items:center;justify-content:center;z-index:2000;padding:18px}
+  .mtOv.open{display:flex}
+  .mtCard{background:var(--surface);border:1px solid var(--line);border-radius:16px;width:100%;max-width:640px;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  .mtCh{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
+  .mtCh .t{font-size:17px;font-weight:750;color:var(--ink)}
+  .mtCh .id{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .mtX{border:0;background:transparent;font-size:24px;line-height:1;color:var(--muted);cursor:pointer}
+  .mtKv{display:grid;grid-template-columns:150px 1fr;gap:9px 14px;padding:18px 20px;font-size:13.5px}
+  .mtKv .k{color:var(--muted)}
+  .mtKv .v{color:var(--ink);overflow-wrap:anywhere}
+  .mtRO{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:4px 11px}
+  @media(max-width:640px){ .mtKv{grid-template-columns:1fr} .mtKv .k{margin-top:8px} }
+  `;
+  var st=document.createElement('style'); st.id='mtCss'; st.textContent=css; document.head.appendChild(st);
+}
+function mtStatusBadge(s){ var m={'New':'mtb-new','In Progress':'mtb-prog','Waiting for CSA':'mtb-wait','Resolved':'mtb-res','Closed':'mtb-closed'}; return '<span class="mtBadge '+(m[s]||'mtb-closed')+'">'+esc(s||'—')+'</span>'; }
+function mtPrioBadge(p){ if(!p) return '<span style="color:var(--muted)">—</span>'; var s=String(p).toLowerCase(); var c=/urgent|high|p1|p2|critical/.test(s)?'mtb-hi':/medium|p3/.test(s)?'mtb-md':'mtb-lo'; return '<span class="mtBadge '+c+'">'+esc(p)+'</span>'; }
+function mtNames(){ var seen={},out=[]; mtState.tickets.forEach(function(t){ var n=String(t.csa||'').trim(); if(n&&!seen[n]){seen[n]=1;out.push(n);} }); out.sort(); return out; }
+function mtFiltered(){ if(!mtState.csa) return mtState.tickets.slice(); var me=mtState.csa.trim().toLowerCase(); return mtState.tickets.filter(function(t){ return String(t.csa||'').trim().toLowerCase()===me; }); }
+function viewMyTickets(){
+  mtInjectCss();
+  return '<div class="mtWrap">'
+    +'<div class="mtHead"><div><h1 class="mtTitle">Ticket Log</h1><p class="mtSub">Every CSA Tech ticket, visible to all CSAs. Status and resolution updates from the Tech Team appear here automatically. This view is read-only.</p></div><button class="mtBtn" id="mtRefresh">↻ Refresh</button></div>'
+    +'<div class="mtBar"><select class="mtSel" id="mtWho"></select>'
+    +'<div class="mtSearch"><span>🔍</span><input id="mtQ" placeholder="Search ticket, title, client…"></div>'
+    +'<select class="mtSel" id="mtStatus"><option value="">All statuses</option>'+MT_STATUSES.map(function(s){return '<option>'+esc(s)+'</option>';}).join('')+'</select></div>'
+    +'<div class="mtStats" id="mtStats"></div>'
+    +'<div id="mtBodyWrap"></div>'
+    +'<div class="mtOv" id="mtOv"><div class="mtCard" id="mtCard"></div></div>'
+    +'</div>';
+}
+function mtRenderWho(){
+  var sel=$('#mtWho'); if(!sel) return; var names=mtNames();
+  sel.innerHTML='<option value="">All CSAs</option>'+names.map(function(n){return '<option value="'+esc(n)+'"'+(n===mtState.csa?' selected':'')+'>'+esc(n)+'</option>';}).join('');
+}
+function mtRenderBody(){
+  var wrap=$('#mtBodyWrap'), stats=$('#mtStats'); if(!wrap) return;
+  if(mtState.loading){ wrap.innerHTML='<div class="mtEmpty">Loading tickets…</div>'; if(stats)stats.innerHTML=''; return; }
+  if(mtState.err){ wrap.innerHTML='<div class="mtEmpty">'+esc(mtState.err)+'</div>'; if(stats)stats.innerHTML=''; return; }
+  var mine=mtFiltered();
+  var by={}; MT_STATUSES.forEach(function(s){by[s]=0;}); mine.forEach(function(t){ if(by[t.status]!==undefined)by[t.status]++; });
+  var openN=mine.filter(function(t){return t.status!=='Resolved'&&t.status!=='Closed';}).length;
+  if(stats) stats.innerHTML=[['Total',mine.length],['Open',openN],['In Progress',by['In Progress']],['Resolved',by['Resolved']],['Closed',by['Closed']]]
+    .map(function(x){return '<div class="mtStat"><div class="n">'+x[1]+'</div><div class="l">'+esc(x[0])+'</div></div>';}).join('');
+  var q=mtState.q.trim().toLowerCase();
+  var list=mine.filter(function(t){
+    if(mtState.status && t.status!==mtState.status) return false;
+    if(q){ var hay=(t.ticketId+' '+t.title+' '+t.client+' '+t.category).toLowerCase(); if(hay.indexOf(q)<0) return false; }
+    return true;
+  });
+  if(!list.length){ wrap.innerHTML='<div class="mtEmpty">'+(mine.length?'No tickets match your filters.':'No tickets on record yet.')+'</div>'; return; }
+  var rows=list.map(function(t){
+    return '<tr data-id="'+esc(t.ticketId)+'">'
+      +'<td><div class="mtId">'+esc(t.ticketId)+'</div><div class="mtTt">'+esc(t.title||'')+'</div></td>'
+      +'<td>'+mtStatusBadge(t.status)+'</td>'
+      +'<td>'+mtPrioBadge(t.priority)+'</td>'
+      +'<td>'+esc(t.client||'—')+'</td>'
+      +'<td>'+esc(t.owner||'Unassigned')+'</td>'
+      +'<td style="white-space:nowrap;color:var(--muted)">'+esc(t.submittedAt||'—')+'</td>'
+      +'<td style="white-space:nowrap;color:var(--muted)">'+esc(t.resolvedAt||'—')+'</td>'
+      +'</tr>';
+  }).join('');
+  wrap.innerHTML='<div class="mtWrapT"><table class="mtTable"><thead><tr><th>Ticket</th><th>Status</th><th>Priority</th><th>Client</th><th>Owner</th><th>Submitted</th><th>Resolved</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  wrap.querySelectorAll('tr[data-id]').forEach(function(tr){ tr.onclick=function(){ mtOpen(tr.getAttribute('data-id')); }; });
+}
+function mtOpen(id){
+  var t=mtState.tickets.filter(function(x){return String(x.ticketId)===String(id);})[0]; if(!t) return;
+  var resNote = t.resolutionNote || t.resolutionNotes || t.note || '';
+  var rows=[
+    ['Ticket ID',t.ticketId],['Issue / title',t.title],['Status',t.status],['Priority',t.priority],['Impact',t.impact],
+    ['Category',t.category],['Subcategory',t.subcategory],['Reported by (CSA)',t.csa],['Client',t.client],['Ticket owner',t.owner],
+    ['Submitted',t.submittedAt],['Issue started',t.issueStarted],['Resolved at',t.resolvedAt],
+    ['Description',t.description],['Resolution notes',resNote]
+  ];
+  var body=rows.map(function(kv){ return '<div class="k">'+esc(kv[0])+'</div><div class="v">'+esc(kv[1]||'—')+'</div>'; }).join('');
+  var card=$('#mtCard'); if(!card) return;
+  card.innerHTML='<div class="mtCh"><div><div class="t">'+esc(t.title||'Ticket')+'</div><div class="id">'+esc(t.ticketId)+' · reported by '+esc(t.csa||'—')+'</div></div><button class="mtX" id="mtX">×</button></div>'
+    +'<div class="mtKv">'+body+'</div>'
+    +'<div style="padding:0 20px 18px"><span class="mtRO">🔒 Read-only — managed by CSA Tech</span></div>';
+  var ov=$('#mtOv'); ov.classList.add('open');
+  var x=$('#mtX'); if(x) x.onclick=function(){ ov.classList.remove('open'); };
+  ov.onclick=function(e){ if(e.target===ov) ov.classList.remove('open'); };
+}
+function mtLoad(){
+  mtState.loading=true; mtState.err=''; mtRenderBody();
+  if(typeof TICKET_LOG_URL==='undefined' || !TICKET_LOG_URL){ mtState.loading=false; mtState.err='Ticket system not connected yet.'; mtRenderBody(); return; }
+  fetch(TICKET_LOG_URL+'?action=listTickets',{method:'GET'}).then(function(r){return r.text();}).then(function(tx){
+    var j; try{ j=JSON.parse(tx); }catch(e){ j=null; }
+    mtState.loading=false;
+    if(j&&j.ok&&j.tickets){ mtState.tickets=j.tickets; mtState.loaded=true; mtState.err=''; }
+    else { mtState.err='Could not load tickets right now — please Refresh.'; }
+    mtRenderWho(); mtRenderBody();
+  }).catch(function(){ mtState.loading=false; mtState.err='Could not reach the ticket system — please Refresh.'; mtRenderBody(); });
+}
+function wireMyTickets(){
+  mtInjectCss();
+  mtRenderWho(); mtRenderBody();
+  var who=$('#mtWho'); if(who) who.onchange=function(){ mtState.csa=this.value; try{localStorage.setItem('mt_csa',mtState.csa);}catch(e){} mtRenderBody(); };
+  var q=$('#mtQ'); if(q){ q.value=mtState.q; q.oninput=function(){ mtState.q=this.value; mtRenderBody(); }; }
+  var fs=$('#mtStatus'); if(fs){ fs.value=mtState.status; fs.onchange=function(){ mtState.status=this.value; mtRenderBody(); }; }
+  var rf=$('#mtRefresh'); if(rf) rf.onclick=mtLoad;
+  if(!mtState.loaded) mtLoad();
+}
+
 // ---------- views ----------
 function render(){
   const v=$('#view');
@@ -418,6 +567,7 @@ function render(){
   else if(state.view==='catalog'){ v.innerHTML=viewCatalog(); wireCatalog(); }
   else if(state.view==='csa'){ v.innerHTML=viewCSA(); wireCSA(); }
   else if(state.view==='csatech'){ v.innerHTML=viewCSATech(); wireCSATech(); }
+  else if(state.view==='mytickets'){ v.innerHTML=viewMyTickets(); wireMyTickets(); }
   else if(state.view==='apibanks'){ v.innerHTML=viewApiBanks(); wireApiBanks(); }
   else if(state.view==='links'){ v.innerHTML=viewLinks(); wireLinks(); }
   else if(state.view==='prospecting'){ v.innerHTML=viewProspecting(); wireProspecting(); }
@@ -426,7 +576,7 @@ function render(){
   else if(state.view==='deliverables'){ v.innerHTML=viewDeliverables(); wireDeliverables(); }
   else if(state.view==='live'){ v.innerHTML=viewLive(); wireLive(); }
   else if(state.view==='discover'){ v.innerHTML=viewDiscover(discQ); wireDiscover(); }
-  const hideChrome=['deliverables','tools','catalog','csa','csatech','apibanks','prospecting','va','sim','links'].includes(state.view);
+  const hideChrome=['deliverables','tools','catalog','csa','csatech','mytickets','apibanks','prospecting','va','sim','links'].includes(state.view);
   const tc=document.querySelector('.topcontrols'); if(tc) tc.classList.toggle('hide', hideChrome);
   const vbar=document.querySelector('#vertbar'), vres=document.querySelector('#vertResults'); if(vbar) vbar.classList.toggle('hide', hideChrome); if(vres) vres.classList.toggle('hide', hideChrome);
   // The MAVIS title header shows only on the Live Analysis view; the whole topbar hides on chrome-less views.
