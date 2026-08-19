@@ -142,37 +142,6 @@
   .tstat .tsv{font-size:18px;font-weight:800;color:var(--ink);margin-top:3px;display:flex;align-items:baseline;gap:6px}
   .tstat .tsv small{font-size:11px;font-weight:700}
   .tstat .tsv small.up{color:var(--green)}.tstat .tsv small.down{color:var(--red)}
-  /* Executive overview */
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
-  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px;box-shadow:var(--shadow)}
-  .kpi .kn{font-size:26px;font-weight:800;color:var(--ink);line-height:1.05}
-  .kpi .kn.kt{font-size:16px;font-weight:750;line-height:1.25;overflow-wrap:anywhere}
-  .kpi .kn.green{color:var(--green)}.kpi .kn.red{color:var(--red)}
-  .kpi .kl{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-top:6px}
-  .kpi .kd{font-size:12px;color:var(--muted);margin-top:4px}
-  .rrow{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line2);cursor:pointer}
-  .rrow:last-child{border-bottom:0}.rrow:hover{background:var(--rowhover)}
-  .rrow.ro,.rrow.ro:hover{cursor:default;background:transparent}
-  .rrow .rlbl{width:150px;font-size:13.5px;color:var(--ink2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .rrow .rtrack{flex:1;height:12px;border-radius:7px;background:var(--gray-bg);overflow:hidden;min-width:60px}
-  .rrow .rfill{display:block;height:100%;border-radius:7px;background:var(--bar)}
-  .rrow .rfill.alt{background:var(--gray)}
-  .rrow .rn{width:80px;text-align:right;font-size:13.5px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
-  .rrow .rpct{color:var(--muted);font-weight:600;font-size:12px;margin-left:6px}
-  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
-  .seg button{border:0;background:var(--panel);color:var(--ink2);font-weight:600;font-size:12.5px;padding:7px 13px;cursor:pointer}
-  .seg button+button{border-left:1px solid var(--line)}
-  .seg button.on{background:var(--brand);color:#fff}
-  .insight{padding:18px 20px}
-  .insHead{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-  .insIcon{width:38px;height:38px;border-radius:10px;background:var(--brand-soft);display:flex;align-items:center;justify-content:center;font-size:18px}
-  .insTitle{font-size:15px;font-weight:750;color:var(--ink)}
-  .insBody{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
-  .insBig{font-size:44px;font-weight:800;color:var(--brand-ink);line-height:1;font-variant-numeric:tabular-nums}
-  .insTxt{flex:1;min-width:240px}
-  .insLead{font-size:15px;color:var(--ink)}
-  .insRec{margin-top:8px;font-size:13px;color:var(--ink2);background:var(--brand-soft);border:1px solid var(--line);border-radius:9px;padding:9px 12px}
-  @media(max-width:640px){ .rrow .rlbl{width:110px} }
 
   /* Priority + SLA bars */
   .brow{display:flex;align-items:center;gap:10px;margin:9px 0}
@@ -277,19 +246,29 @@
     <!-- OVERVIEW -->
     <div id="overviewView">
       <div class="head">
-        <div><h1>Overview</h1><p class="sub">Ticket health at a glance — where the team's time goes and what needs a permanent fix.</p></div>
+        <div><h1>Overview</h1><p class="sub">High-level ticket health, priorities, and what needs attention.</p></div>
         <div class="hbtns"><button class="btn themeToggle" type="button" aria-label="Toggle light or dark theme"><span class="ti">🌙</span><span class="tl">Dark</span></button><button class="btn" id="ovRefresh">↻ Refresh</button><button class="btn primary" id="ovGoTickets">View all tickets →</button></div>
       </div>
-      <div class="kpis" id="ovKpis"></div>
-      <div class="card" style="margin-bottom:18px"><div class="ch"><h3>Ticket categories</h3><span class="hint">What we get escalated most</span></div><div class="cb" id="ovCats"></div></div>
-      <div class="card trendcard" style="margin-bottom:18px">
-        <div class="ch">
-          <div><h3>Tickets raised</h3><div class="hint">Are escalations increasing?</div></div>
-          <div class="trendhead"><div class="seg" id="ovSeg"><button type="button" data-mode="weekly" class="on">Weekly</button><button type="button" data-mode="monthly">Monthly</button></div><span class="delta" id="ovTrendDelta"></span></div>
-        </div>
-        <div class="cb"><div id="ovTrend"></div></div>
+      <div class="tiles" id="ovTiles"></div>
+      <div class="grid2" style="margin-bottom:18px">
+        <div class="card"><div class="ch"><h3>Priorities · open</h3></div><div class="cb" id="ovPrio"></div></div>
+        <div class="card"><div class="ch"><h3>SLA status</h3></div><div class="cb"><div id="ovSla"></div><p class="hint" id="ovSlaNote" style="margin:10px 0 0"></p></div></div>
       </div>
-      <div class="card insight" id="ovBackend"></div>
+      <div class="sect"><h3>Needs attention</h3><span class="lnk" id="ovSeeAll">View all →</span></div>
+      <div class="tablewrap" style="margin-bottom:18px"><table>
+        <thead><tr><th>Ticket</th><th>CSA</th><th>Client</th><th>Priority</th><th>Owner</th><th>Status</th><th>SLA / time left</th><th>Updated</th><th style="text-align:right">Manage</th></tr></thead>
+        <tbody id="ovNeeds"></tbody></table><div class="empty" id="ovNeedsEmpty" style="display:none"></div></div>
+      <div class="grid2" style="margin-bottom:18px">
+        <div class="card"><div class="ch"><h3>Tech team workload</h3><span class="hint">Active tickets by owner</span></div><div class="cb" id="ovWorkload"></div></div>
+        <div class="card"><div class="ch"><h3>Ticket categories</h3><span class="hint">Open tickets by source</span></div><div class="cb" id="ovCats"></div></div>
+      </div>
+      <div class="card trendcard">
+        <div class="ch">
+          <div><h3>Tickets Over Time</h3><div class="hint">Daily ticket volume</div></div>
+          <div class="trendhead"><span class="delta" id="ovTrendDelta"></span><span class="lgd"><i class="sw sw-sub"></i>Tickets</span></div>
+        </div>
+        <div class="cb"><div id="ovTrend"></div><div class="trendstats" id="ovTrendStats"></div></div>
+      </div>
     </div>
 
     <!-- TICKETS -->
@@ -464,93 +443,156 @@ function fmtLeft(t){
   else { txt=Math.round(h/24)+'d'; }
   return over?{txt:'Overdue '+txt,cls:'red'}:{txt:txt+' left',cls:s.kind==='risk'?'amber':'muted'};
 }
-var ovTrendMode='weekly';
-function ovKpi(n,l,d,cls){ return '<div class="kpi"><div class="kn '+(cls||'')+'">'+esc(String(n))+'</div><div class="kl">'+esc(l)+'</div>'+(d?'<div class="kd">'+esc(d)+'</div>':'')+'</div>'; }
-function ovKpiText(n,l,d){ return '<div class="kpi"><div class="kn kt">'+esc(String(n))+'</div><div class="kl">'+esc(l)+'</div>'+(d?'<div class="kd">'+esc(d)+'</div>':'')+'</div>'; }
-function ovCatCounts(){ var by={}; TICKETS.forEach(function(t){ var c=((t.category||'').trim())||'Other'; by[c]=(by[c]||0)+1; }); return Object.keys(by).map(function(c){return {c:c,n:by[c]};}).sort(function(a,b){return b.n-a.n;}); }
-function ovPct30(){ var n=new Date(), a=new Date(n), b=new Date(n); a.setDate(n.getDate()-30); b.setDate(n.getDate()-60); var cur=0,prev=0;
-  TICKETS.forEach(function(t){ var sd=pdate(t.submittedAt); if(!sd)return; if(sd>=a)cur++; else if(sd>=b)prev++; });
-  return {cur:cur,prev:prev,pct: prev>0?Math.round((cur-prev)/prev*100):(cur>0?100:0)}; }
 function renderOverview(){
-  var total=TICKETS.length;
-  var open=TICKETS.filter(isOpen).length;
-  var resolved=TICKETS.filter(function(t){return t.status==='Resolved'||t.status==='Closed';}).length;
-  var cats=ovCatCounts();
-  var top=cats.length?cats[0]:{c:'—',n:0};
-  var topPct= total?Math.round(top.n/total*100):0;
-  var ch=ovPct30(), up=ch.pct>=0;
-  $('#ovKpis').innerHTML=
-    ovKpi(total,'Total tickets','')+
-    ovKpi(open,'Open','')+
-    ovKpi(resolved,'Resolved','')+
-    ovKpiText(top.c,'Top issue',topPct+'% of tickets')+
-    ovKpi((up?'+':'−')+Math.abs(ch.pct)+'%','vs previous 30 days',ch.cur+' raised (was '+ch.prev+')',up?'green':'red');
-  renderCatsRanked(cats,total);
-  renderRaised();
-  renderBackend(cats,total);
+  var open=TICKETS.filter(isOpen);
+  var over=0,risk=0,ok=0;
+  open.forEach(function(t){ var s=sla(t); if(s.kind==='over')over++; else if(s.kind==='risk')risk++; else ok++; });
+  // summary cards -> click filters the Tickets page
+  var cards=[
+    {n:open.length,l:'Open',f:{openOnly:true},cls:''},
+    {n:cntStatus('New'),l:'New',f:{status:'New'},cls:''},
+    {n:cntStatus('In Progress'),l:'In Progress',f:{status:'In Progress'},cls:''},
+    {n:cntStatus('Waiting for CSA'),l:'Waiting for CSA',f:{status:'Waiting for CSA'},cls:''},
+    {n:over,l:'Overdue / SLA',f:{sla:'over',openOnly:true},cls:over?'red':''},
+    {n:cntStatus('Resolved'),l:'Resolved',f:{status:'Resolved'},cls:'green'}
+  ];
+  var ot=$('#ovTiles');
+  ot.innerHTML=cards.map(function(c,i){ return '<div class="tile click" data-ci="'+i+'"><div class="n '+c.cls+'">'+c.n+'</div><div class="l">'+esc(c.l)+'</div></div>'; }).join('');
+  ot.querySelectorAll('[data-ci]').forEach(function(e){ e.onclick=function(){ applyFilter(cards[+e.getAttribute('data-ci')].f); }; });
+  // priorities (open)
+  var prio=[['Urgent','du','pf-urgent'],['High','dh','pf-high'],['Medium','dm','pf-medium'],['Low','dl','pf-low']];
+  var pc={}; open.forEach(function(t){ var p=t.priority||''; pc[p]=(pc[p]||0)+1; });
+  var pmax=Math.max(1,Math.max.apply(null,prio.map(function(o){return pc[o[0]]||0;})));
+  $('#ovPrio').innerHTML=prio.map(function(o){ var c=pc[o[0]]||0;
+    return '<div class="drow" data-prio="'+esc(o[0])+'"><span class="pdot '+o[1]+'"></span><span class="dlbl">'+o[0]+'</span><span class="dbar"><span class="'+o[2]+'" style="width:'+Math.round(c/pmax*100)+'%"></span></span><span class="dn">'+c+'</span></div>';
+  }).join('');
+  $('#ovPrio').querySelectorAll('[data-prio]').forEach(function(e){ e.onclick=function(){ applyFilter({priority:e.getAttribute('data-prio'),openOnly:true}); }; });
+  // SLA status (open)
+  var srows=[['On track',ok,'ok','sok','sf-ok'],['At risk',risk,'risk','srisk','sf-risk'],['Breached',over,'over','sover','sf-over']];
+  var smax=Math.max(1,ok,risk,over);
+  $('#ovSla').innerHTML=srows.map(function(o){
+    return '<div class="drow" data-sla="'+o[2]+'"><span class="pdot '+o[3]+'"></span><span class="dlbl">'+o[0]+'</span><span class="dbar"><span class="'+o[4]+'" style="width:'+Math.round(o[1]/smax*100)+'%"></span></span><span class="dn">'+o[1]+'</span></div>';
+  }).join('');
+  $('#ovSla').querySelectorAll('[data-sla]').forEach(function(e){ e.onclick=function(){ applyFilter({sla:e.getAttribute('data-sla'),openOnly:true}); }; });
+  $('#ovSlaNote').textContent = over? (over+' ticket'+(over===1?'':'s')+' past SLA — clear these first.') : 'No tickets past SLA. Nice.';
+  renderNeeds(open);
+  renderWorkload(open);
+  renderCats(open);
+  renderTrend();
 }
-/* Ticket categories — horizontal ranked bars (all tickets) */
-function renderCatsRanked(cats,total){
-  var el=$('#ovCats'); if(!el) return;
-  if(!cats.length){ el.innerHTML='<div class="empty">No tickets yet.</div>'; return; }
-  var top=cats.slice(0,8), otherN=cats.slice(8).reduce(function(s,r){return s+r.n;},0);
-  var mx=Math.max(1,top[0].n);
-  var html=top.map(function(r){ var pct=total?Math.round(r.n/total*100):0;
-    return '<div class="rrow" data-cat="'+esc(r.c)+'"><div class="rlbl">'+esc(r.c)+'</div><div class="rtrack"><span class="rfill" style="width:'+Math.round(r.n/mx*100)+'%"></span></div><div class="rn">'+r.n+'<span class="rpct">'+pct+'%</span></div></div>'; }).join('');
-  if(otherN) html+='<div class="rrow ro"><div class="rlbl muted">Other</div><div class="rtrack"><span class="rfill alt" style="width:'+Math.round(otherN/mx*100)+'%"></span></div><div class="rn">'+otherN+'<span class="rpct">'+(total?Math.round(otherN/total*100):0)+'%</span></div></div>';
+/* Needs attention: SLA breached > Urgent > High > Unassigned > Waiting for CSA */
+function renderNeeds(open){
+  var scored=open.map(function(t){ var s=sla(t); var sc=0;
+    if(s.kind==='over')sc+=100;
+    if(t.priority==='Urgent')sc+=50; else if(t.priority==='High')sc+=25;
+    if(!t.owner)sc+=10;
+    if(t.status==='Waiting for CSA')sc+=5;
+    return {t:t,s:s,sc:sc};
+  }).filter(function(x){return x.sc>0;}).sort(function(a,b){return b.sc-a.sc;});
+  var tb=$('#ovNeeds'), em=$('#ovNeedsEmpty');
+  if(!scored.length){ tb.innerHTML=''; em.style.display=''; em.innerHTML='<div style="font-weight:750;color:var(--ink);font-size:15px">All caught up!</div><div style="margin-top:4px">No tickets currently require attention.</div>'; return; }
+  em.style.display='none';
+  tb.innerHTML=scored.slice(0,8).map(function(x){ var t=x.t, lf=fmtLeft(t);
+    var slaHtml=x.s.kind==='over'?'<span class="flag over">Breached</span>':x.s.kind==='risk'?'<span class="flag risk">At risk</span>':'<span class="muted">On track</span>';
+    return '<tr class="trow" data-open="'+esc(t.ticketId)+'">'+
+      '<td><div class="tid">'+esc(t.ticketId)+'</div><div class="tt">'+esc(t.title)+'</div></td>'+
+      '<td>'+esc(t.csa||'—')+'</td>'+
+      '<td>'+esc(t.client||'—')+'</td>'+
+      '<td>'+(t.priority?'<span class="badge '+priCls(t.priority)+'">'+esc(t.priority)+'</span>':'<span class="muted">—</span>')+'</td>'+
+      '<td>'+(t.owner?esc(t.owner):'<span class="flag un">Unassigned</span>')+'</td>'+
+      '<td><span class="badge '+stCls(t.status)+'">'+esc(t.status||'')+'</span></td>'+
+      '<td>'+slaHtml+'<div class="tsub" style="color:var(--'+lf.cls+')">'+esc(lf.txt)+'</div></td>'+
+      '<td class="muted" style="white-space:nowrap">'+esc(t.lastUpdated||'')+'</td>'+
+      '<td style="text-align:right"><button class="manage" data-edit="'+esc(t.ticketId)+'">Manage</button></td>'+
+    '</tr>';
+  }).join('');
+  tb.querySelectorAll('tr[data-open]').forEach(function(tr){ tr.onclick=function(){ openTicket(tr.getAttribute('data-open'),'detail'); }; });
+  tb.querySelectorAll('[data-edit]').forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); openTicket(b.getAttribute('data-edit'),'edit'); }; });
+}
+/* Tech team workload: active (open) tickets by owner; Unassigned highlighted */
+function renderWorkload(open){
+  var by={}; open.forEach(function(t){ var o=t.owner||'__UN__'; by[o]=(by[o]||0)+1; });
+  var rows=Object.keys(by).map(function(o){return {o:o,n:by[o]};});
+  rows.sort(function(a,b){ if(a.o==='__UN__')return 1; if(b.o==='__UN__')return -1; return b.n-a.n; });
+  var el=$('#ovWorkload');
+  if(!rows.length){ el.innerHTML='<div class="empty">No active tickets.</div>'; return; }
+  var mx=Math.max(1,Math.max.apply(null,rows.map(function(r){return r.n;})));
+  el.innerHTML=rows.map(function(r){ var un=r.o==='__UN__', name=un?'Unassigned':r.o;
+    return '<div class="drow'+(un?' un':'')+'" data-owner="'+esc(un?'__UNASSIGNED__':r.o)+'"><span class="dlbl">'+esc(name)+'</span><span class="dbar"><span class="'+(un?'wf-un':'wf-ok')+'" style="width:'+Math.round(r.n/mx*100)+'%"></span></span><span class="dn">'+r.n+'</span></div>';
+  }).join('');
+  el.querySelectorAll('[data-owner]').forEach(function(e){ e.onclick=function(){ applyFilter({owner:e.getAttribute('data-owner'),openOnly:true}); }; });
+}
+/* Ticket categories: open tickets by category, top 6 + Other */
+function renderCats(open){
+  var by={}; open.forEach(function(t){ var c=((t.category||'').trim())||'Other'; by[c]=(by[c]||0)+1; });
+  var arr=Object.keys(by).map(function(c){return {c:c,n:by[c]};}).sort(function(a,b){return b.n-a.n;});
+  var el=$('#ovCats');
+  if(!arr.length){ el.innerHTML='<div class="empty">No active tickets.</div>'; return; }
+  var top=arr.slice(0,6), otherN=arr.slice(6).reduce(function(s,r){return s+r.n;},0);
+  var mx=Math.max(1,Math.max.apply(null,top.map(function(r){return r.n;})));
+  var html=top.map(function(r){
+    return '<div class="drow" data-cat="'+esc(r.c)+'"><span class="dlbl">'+esc(r.c)+'</span><span class="dbar"><span class="cf" style="width:'+Math.round(r.n/mx*100)+'%"></span></span><span class="dn">'+r.n+'</span></div>';
+  }).join('');
+  if(otherN) html+='<div class="drow ro"><span class="dlbl muted">Other</span><span class="dbar"><span class="cf alt" style="width:'+Math.round(otherN/mx*100)+'%"></span></span><span class="dn">'+otherN+'</span></div>';
   el.innerHTML=html;
-  el.querySelectorAll('[data-cat]').forEach(function(e){ e.onclick=function(){ applyFilter({category:e.getAttribute('data-cat')}); }; });
+  el.querySelectorAll('[data-cat]').forEach(function(e){ e.onclick=function(){ applyFilter({category:e.getAttribute('data-cat'),openOnly:true}); }; });
 }
-/* Tickets raised — weekly (last 12w) or monthly (last 6mo) buckets of submitted tickets */
-function ovBuckets(mode){
-  var now=new Date(); now.setHours(0,0,0,0); var b=[], i;
-  if(mode==='monthly'){
-    var y=now.getFullYear(), m=now.getMonth();
-    for(i=5;i>=0;i--){ var d=new Date(y,m-i,1); b.push({label:MONTHS[d.getMonth()]+' '+String(d.getFullYear()).slice(2), start:new Date(d.getFullYear(),d.getMonth(),1), end:new Date(d.getFullYear(),d.getMonth()+1,1), n:0}); }
-  } else {
-    var dow=now.getDay(), off=(dow===0?6:dow-1), mon=new Date(now); mon.setDate(now.getDate()-off);
-    for(i=11;i>=0;i--){ var s=new Date(mon); s.setDate(mon.getDate()-i*7); var e=new Date(s); e.setDate(s.getDate()+7); b.push({label:(s.getMonth()+1)+'/'+s.getDate(), start:s, end:e, n:0}); }
-  }
-  TICKETS.forEach(function(t){ var sd=pdate(t.submittedAt); if(!sd)return; for(var j=0;j<b.length;j++){ if(sd>=b[j].start && sd<b[j].end){ b[j].n++; break; } } });
-  return b;
-}
-function renderRaised(){
-  var b=ovBuckets(ovTrendMode), n=b.length, counts=b.map(function(x){return x.n;});
-  var maxV=Math.max.apply(null,counts.concat([0])), yMax=Math.max(5,Math.ceil(maxV/5)*5);
-  var W=720,H=230,padL=30,padR=16,padT=14,padB=26, plotW=W-padL-padR, plotH=H-padT-padB;
+/* Ticket volume, last 14 days: styled area chart of daily submitted tickets */
+function dayKey(d){ function p(n){return(n<10?'0':'')+n;} return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function renderTrend(){
+  var days=14, base=new Date(); base.setHours(0,0,0,0);
+  var cur=[], curIdx={};
+  for(var i=days-1;i>=0;i--){ var d=new Date(base); d.setDate(d.getDate()-i); var k=dayKey(d); curIdx[k]=cur.length; cur.push({k:k,d:d,n:0}); }
+  // previous 14-day window (for the % delta)
+  var prevStart=new Date(base); prevStart.setDate(prevStart.getDate()-(2*days-1));
+  var prevEnd=new Date(base);   prevEnd.setDate(prevEnd.getDate()-days);
+  var prevCount=0;
+  TICKETS.forEach(function(t){
+    var sd=pdate(t.submittedAt); if(!sd) return; var day=new Date(sd); day.setHours(0,0,0,0); var k=dayKey(day);
+    if(curIdx[k]!==undefined) cur[curIdx[k]].n++;
+    else if(day>=prevStart && day<=prevEnd) prevCount++;
+  });
+  var counts=cur.map(function(b){return b.n;});
+  var total=counts.reduce(function(a,b){return a+b;},0);
+  var maxDaily=Math.max.apply(null,counts.concat([0]));
+  var avg=Math.round(total/days);
+  var yMax=Math.max(10,Math.ceil(maxDaily/10)*10);
+  // geometry
+  var W=720,H=240,padL=34,padR=16,padT=14,padB=26, plotW=W-padL-padR, plotH=H-padT-padB, n=days;
   function X(i){ return padL + (n<=1?0:i*(plotW/(n-1))); }
   function Y(v){ return padT + (1 - v/yMax)*plotH; }
   var steps=5, grid='';
   for(var g=0;g<=steps;g++){ var val=Math.round(yMax*g/steps), y=Y(val);
-    grid+='<line class="tgrid" x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'"/><text class="tyl" x="'+(padL-6)+'" y="'+(y+3.5).toFixed(1)+'">'+val+'</text>'; }
+    grid+='<line class="tgrid" x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'"/>'
+        + '<text class="tyl" x="'+(padL-6)+'" y="'+(y+3.5).toFixed(1)+'">'+val+'</text>'; }
   var linePts=counts.map(function(v,i){ return X(i).toFixed(1)+','+Y(v).toFixed(1); }).join(' ');
   var area='M '+X(0).toFixed(1)+' '+Y(0).toFixed(1);
   counts.forEach(function(v,i){ area+=' L '+X(i).toFixed(1)+' '+Y(v).toFixed(1); });
   area+=' L '+X(n-1).toFixed(1)+' '+Y(0).toFixed(1)+' Z';
-  var dots=counts.map(function(v,i){ return '<circle class="tdot" cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="3.2"><title>'+esc(b[i].label+': '+v)+'</title></circle>'; }).join('');
-  var xlabels=b.map(function(x,i){ return '<text class="txl" x="'+X(i).toFixed(1)+'" y="'+(H-8)+'">'+esc(x.label)+'</text>'; }).join('');
-  $('#ovTrend').innerHTML='<svg class="tchart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Tickets raised over time">'
+  var dots=counts.map(function(v,i){ return '<circle class="tdot" cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="3.2"><title>'+esc(MONTHS[cur[i].d.getMonth()]+' '+cur[i].d.getDate()+': '+v)+'</title></circle>'; }).join('');
+  var xlabels=cur.map(function(b,i){ return '<text class="txl" x="'+X(i).toFixed(1)+'" y="'+(H-8)+'">'+MONTHS[b.d.getMonth()]+' '+b.d.getDate()+'</text>'; }).join('');
+  $('#ovTrend').innerHTML=
+    '<svg class="tchart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Daily ticket volume, last 14 days">'
     +'<defs><linearGradient id="tgrad" x1="0" y1="0" x2="0" y2="1"><stop class="tg0" offset="0"/><stop class="tg1" offset="1"/></linearGradient></defs>'
-    +grid+'<path class="tarea" d="'+area+'" fill="url(#tgrad)"/><polyline class="tline" points="'+linePts+'"/>'+dots+xlabels+'</svg>';
-  var cur=counts[n-1]||0, prev=counts[n-2]||0, pct=prev>0?Math.round((cur-prev)/prev*100):(cur>0?100:0), up=pct>=0;
-  var dl=$('#ovTrendDelta'); if(dl){ dl.className='delta '+(up?'up':'down'); dl.textContent=(up?'↑ ':'↓ ')+Math.abs(pct)+'% vs previous '+(ovTrendMode==='monthly'?'month':'week'); }
+    +grid
+    +'<path class="tarea" d="'+area+'" fill="url(#tgrad)"/>'
+    +'<polyline class="tline" points="'+linePts+'"/>'
+    +dots+xlabels
+    +'</svg>';
+  // delta vs previous 14 days
+  var pct = prevCount>0 ? Math.round((total-prevCount)/prevCount*100) : (total>0?100:0);
+  var up = pct>=0;
+  $('#ovTrendDelta').className='delta '+(up?'up':'down');
+  $('#ovTrendDelta').textContent=(up?'↑ ':'↓ ')+Math.abs(pct)+'% vs last 14 days';
+  // summary tiles
+  var range=MONTHS[cur[0].d.getMonth()]+' '+cur[0].d.getDate()+' – '+MONTHS[cur[n-1].d.getMonth()]+' '+cur[n-1].d.getDate();
+  $('#ovTrendStats').innerHTML=
+    '<div class="tstat"><div class="tsl">Total tickets</div><div class="tsv">'+total+' <small class="'+(up?'up':'down')+'">'+(up?'↑':'↓')+Math.abs(pct)+'%</small></div></div>'+
+    '<div class="tstat"><div class="tsl">Daily average</div><div class="tsv">'+avg+'</div></div>'+
+    '<div class="tstat"><div class="tsl">Highest day</div><div class="tsv">'+maxDaily+'</div></div>'+
+    '<div class="tstat"><div class="tsl">Date range</div><div class="tsv" style="font-size:13px;font-weight:700">'+esc(range)+'</div></div>';
 }
-/* Backend fix opportunity — biggest recurring category */
-function renderBackend(cats,total){
-  var el=$('#ovBackend'); if(!el) return;
-  if(!total){ el.innerHTML='<div class="insHead"><span class="insIcon">🛠</span><div><div class="insTitle">Backend fix opportunity</div></div></div><p class="hint" style="margin:0">No tickets yet.</p>'; return; }
-  var top=cats[0], second=cats[1], pct=Math.round(top.n/total*100);
-  el.innerHTML='<div class="insHead"><span class="insIcon">🛠</span><div><div class="insTitle">Backend fix opportunity</div><div class="hint">Where a permanent fix would cut the most tickets</div></div></div>'
-    +'<div class="insBody"><div class="insBig">'+pct+'%</div><div class="insTxt">'
-    +'<div class="insLead">Top recurring issue: <b>'+esc(top.c)+'</b></div>'
-    +'<div class="hint">'+top.n+' of '+total+' tickets'+(second?' · next: '+esc(second.c)+' ('+second.n+')':'')+'</div>'
-    +'<div class="insRec">Consider prioritizing a permanent backend fix for <b>'+esc(top.c)+'</b> to remove this recurring load.</div>'
-    +'</div></div>';
-}
-/* Legacy operational Overview render fns (Needs attention / Workload / open-category bars)
-   removed in the executive redesign — that triage now lives on the Tickets page. */
-function dayKey(d){ function p(n){return(n<10?'0':'')+n;} return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
-var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 /* Apply a filter set from the Overview, then jump to Tickets */
 function applyFilter(patch){
   state.q='';state.status='';state.owner='';state.csa='';state.priority='';state.category='';state.sla='';state.openOnly=false;
@@ -696,7 +738,7 @@ document.querySelectorAll('.navi').forEach(function(n){ n.onclick=function(){ se
 document.querySelectorAll('.themeToggle').forEach(function(b){ b.onclick=toggleTheme; });
 updateToggleUI(document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light');
 $('#ovGoTickets').onclick=function(){ applyFilter({}); };
-document.querySelectorAll('#ovSeg button').forEach(function(btn){ btn.onclick=function(){ ovTrendMode=btn.getAttribute('data-mode'); document.querySelectorAll('#ovSeg button').forEach(function(b){ b.classList.toggle('on', b===btn); }); renderRaised(); }; });
+$('#ovSeeAll').onclick=function(){ applyFilter({}); };
 $('#ovRefresh').onclick=loadAll;
 $('#tkRefresh').onclick=loadAll;
 $('#tkClear').onclick=clearFilters;
