@@ -118,14 +118,30 @@
   .chip b{color:var(--muted);font-weight:700;font-size:13px}
   .chip:hover b{color:var(--red)}
   .chip.clr{background:transparent;border-color:transparent;text-decoration:underline}
-  /* Trend chart */
-  .trendsvg{width:100%;height:118px;display:block}
-  .ln-sub{fill:none;stroke:var(--brand);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
-  .ln-res{fill:none;stroke:var(--green);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
-  .trendx{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:6px}
+  /* Trend chart (area) */
+  .trendcard .ch{align-items:flex-start}
+  .trendhead{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end}
+  .delta{font-size:12.5px;font-weight:700;white-space:nowrap}
+  .delta.up{color:var(--green)}.delta.down{color:var(--red)}
+  .tchart{width:100%;height:auto;display:block}
+  .tgrid{stroke:var(--line);stroke-width:1}
+  .tbase{stroke:var(--line);stroke-width:1}
+  .tyl{fill:var(--muted);font-size:11px;text-anchor:end}
+  .txl{fill:var(--muted);font-size:11px;text-anchor:middle}
+  .tline{fill:none;stroke:var(--brand);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+  .tarea{stroke:none}
+  .tdot{fill:var(--panel);stroke:var(--brand);stroke-width:2}
+  .tg0{stop-color:var(--brand);stop-opacity:.26}
+  .tg1{stop-color:var(--brand);stop-opacity:0}
   .lgd{font-size:12px;color:var(--muted);font-weight:600}
   .sw{display:inline-block;width:12px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
-  .sw-sub{background:var(--brand)}.sw-res{background:var(--green)}
+  .sw-sub{background:var(--brand)}
+  .trendstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:16px}
+  .tstat{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel)}
+  .tstat .tsl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  .tstat .tsv{font-size:18px;font-weight:800;color:var(--ink);margin-top:3px;display:flex;align-items:baseline;gap:6px}
+  .tstat .tsv small{font-size:11px;font-weight:700}
+  .tstat .tsv small.up{color:var(--green)}.tstat .tsv small.down{color:var(--red)}
 
   /* Priority + SLA bars */
   .brow{display:flex;align-items:center;gap:10px;margin:9px 0}
@@ -240,7 +256,13 @@
         <div class="card"><div class="ch"><h3>Tech team workload</h3><span class="hint">Active tickets by owner</span></div><div class="cb" id="ovWorkload"></div></div>
         <div class="card"><div class="ch"><h3>Ticket categories</h3><span class="hint">Open tickets by source</span></div><div class="cb" id="ovCats"></div></div>
       </div>
-      <div class="card"><div class="ch"><h3>Ticket volume · last 30 days</h3><span class="hint" id="ovTrendLegend"></span></div><div class="cb" id="ovTrend"></div></div>
+      <div class="card trendcard">
+        <div class="ch">
+          <div><h3>Tickets Over Time</h3><div class="hint">Daily ticket volume</div></div>
+          <div class="trendhead"><span class="delta" id="ovTrendDelta"></span><span class="lgd"><i class="sw sw-sub"></i>Tickets</span></div>
+        </div>
+        <div class="cb"><div id="ovTrend"></div><div class="trendstats" id="ovTrendStats"></div></div>
+      </div>
     </div>
 
     <!-- TICKETS -->
@@ -379,7 +401,7 @@ function setView(v){
   $('#settingsView').style.display=v==='settings'?'':'none';
 }
 function loadAll(){
-  api('listTickets').then(function(r){
+  return api('listTickets').then(function(r){
     if(r&&r.ok){ TICKETS=r.tickets||[]; refreshCsaFilter(); refreshCatFilter(); renderOverview(); renderTickets(); }
     else toast((r&&r.error)||'Failed to load tickets');
   }).catch(function(){ toast('Could not reach the relay. Check the URL in Settings.'); });
@@ -496,23 +518,61 @@ function renderCats(open){
   el.innerHTML=html;
   el.querySelectorAll('[data-cat]').forEach(function(e){ e.onclick=function(){ applyFilter({category:e.getAttribute('data-cat'),openOnly:true}); }; });
 }
-/* Ticket volume, last 30 days: submitted vs resolved */
+/* Ticket volume, last 14 days: styled area chart of daily submitted tickets */
 function dayKey(d){ function p(n){return(n<10?'0':'')+n;} return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function renderTrend(){
-  var days=30, buckets=[], idx={}, base=new Date(); base.setHours(0,0,0,0);
-  for(var i=days-1;i>=0;i--){ var d=new Date(base); d.setDate(d.getDate()-i); var k=dayKey(d); idx[k]=buckets.length; buckets.push({k:k,sub:0,res:0}); }
+  var days=14, base=new Date(); base.setHours(0,0,0,0);
+  var cur=[], curIdx={};
+  for(var i=days-1;i>=0;i--){ var d=new Date(base); d.setDate(d.getDate()-i); var k=dayKey(d); curIdx[k]=cur.length; cur.push({k:k,d:d,n:0}); }
+  // previous 14-day window (for the % delta)
+  var prevStart=new Date(base); prevStart.setDate(prevStart.getDate()-(2*days-1));
+  var prevEnd=new Date(base);   prevEnd.setDate(prevEnd.getDate()-days);
+  var prevCount=0;
   TICKETS.forEach(function(t){
-    var sd=pdate(t.submittedAt); if(sd){ var ks=dayKey(sd); if(idx[ks]!==undefined) buckets[idx[ks]].sub++; }
-    if(t.status==='Resolved'||t.status==='Closed'){ var rd=pdate(t.resolvedAt)||pdate(t.lastUpdated)||pdate(t.submittedAt); if(rd){ var kr=dayKey(rd); if(idx[kr]!==undefined) buckets[idx[kr]].res++; } }
+    var sd=pdate(t.submittedAt); if(!sd) return; var day=new Date(sd); day.setHours(0,0,0,0); var k=dayKey(day);
+    if(curIdx[k]!==undefined) cur[curIdx[k]].n++;
+    else if(day>=prevStart && day<=prevEnd) prevCount++;
   });
-  var maxV=Math.max(1,Math.max.apply(null,buckets.map(function(b){return Math.max(b.sub,b.res);})));
-  var W=100,H=34;
-  function line(sel){ return buckets.map(function(b,i){ var x=(i/(days-1))*W, y=H-(b[sel]/maxV)*(H-4)-2; return x.toFixed(2)+','+y.toFixed(2); }).join(' '); }
-  var totSub=buckets.reduce(function(s,b){return s+b.sub;},0), totRes=buckets.reduce(function(s,b){return s+b.res;},0);
-  $('#ovTrend').innerHTML='<svg class="trendsvg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Ticket volume last 30 days, submitted vs resolved">'
-    +'<polyline class="ln-sub" points="'+line('sub')+'"/><polyline class="ln-res" points="'+line('res')+'"/></svg>'
-    +'<div class="trendx"><span>'+esc(buckets[0].k.slice(5))+'</span><span>'+esc(buckets[buckets.length-1].k.slice(5))+'</span></div>';
-  $('#ovTrendLegend').innerHTML='<span class="lgd"><i class="sw sw-sub"></i>Submitted '+totSub+'</span> &nbsp; <span class="lgd"><i class="sw sw-res"></i>Resolved '+totRes+'</span>';
+  var counts=cur.map(function(b){return b.n;});
+  var total=counts.reduce(function(a,b){return a+b;},0);
+  var maxDaily=Math.max.apply(null,counts.concat([0]));
+  var avg=Math.round(total/days);
+  var yMax=Math.max(10,Math.ceil(maxDaily/10)*10);
+  // geometry
+  var W=720,H=240,padL=34,padR=16,padT=14,padB=26, plotW=W-padL-padR, plotH=H-padT-padB, n=days;
+  function X(i){ return padL + (n<=1?0:i*(plotW/(n-1))); }
+  function Y(v){ return padT + (1 - v/yMax)*plotH; }
+  var steps=5, grid='';
+  for(var g=0;g<=steps;g++){ var val=Math.round(yMax*g/steps), y=Y(val);
+    grid+='<line class="tgrid" x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'"/>'
+        + '<text class="tyl" x="'+(padL-6)+'" y="'+(y+3.5).toFixed(1)+'">'+val+'</text>'; }
+  var linePts=counts.map(function(v,i){ return X(i).toFixed(1)+','+Y(v).toFixed(1); }).join(' ');
+  var area='M '+X(0).toFixed(1)+' '+Y(0).toFixed(1);
+  counts.forEach(function(v,i){ area+=' L '+X(i).toFixed(1)+' '+Y(v).toFixed(1); });
+  area+=' L '+X(n-1).toFixed(1)+' '+Y(0).toFixed(1)+' Z';
+  var dots=counts.map(function(v,i){ return '<circle class="tdot" cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="3.2"><title>'+esc(MONTHS[cur[i].d.getMonth()]+' '+cur[i].d.getDate()+': '+v)+'</title></circle>'; }).join('');
+  var xlabels=cur.map(function(b,i){ return '<text class="txl" x="'+X(i).toFixed(1)+'" y="'+(H-8)+'">'+MONTHS[b.d.getMonth()]+' '+b.d.getDate()+'</text>'; }).join('');
+  $('#ovTrend').innerHTML=
+    '<svg class="tchart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Daily ticket volume, last 14 days">'
+    +'<defs><linearGradient id="tgrad" x1="0" y1="0" x2="0" y2="1"><stop class="tg0" offset="0"/><stop class="tg1" offset="1"/></linearGradient></defs>'
+    +grid
+    +'<path class="tarea" d="'+area+'" fill="url(#tgrad)"/>'
+    +'<polyline class="tline" points="'+linePts+'"/>'
+    +dots+xlabels
+    +'</svg>';
+  // delta vs previous 14 days
+  var pct = prevCount>0 ? Math.round((total-prevCount)/prevCount*100) : (total>0?100:0);
+  var up = pct>=0;
+  $('#ovTrendDelta').className='delta '+(up?'up':'down');
+  $('#ovTrendDelta').textContent=(up?'↑ ':'↓ ')+Math.abs(pct)+'% vs last 14 days';
+  // summary tiles
+  var range=MONTHS[cur[0].d.getMonth()]+' '+cur[0].d.getDate()+' – '+MONTHS[cur[n-1].d.getMonth()]+' '+cur[n-1].d.getDate();
+  $('#ovTrendStats').innerHTML=
+    '<div class="tstat"><div class="tsl">Total tickets</div><div class="tsv">'+total+' <small class="'+(up?'up':'down')+'">'+(up?'↑':'↓')+Math.abs(pct)+'%</small></div></div>'+
+    '<div class="tstat"><div class="tsl">Daily average</div><div class="tsv">'+avg+'</div></div>'+
+    '<div class="tstat"><div class="tsl">Highest day</div><div class="tsv">'+maxDaily+'</div></div>'+
+    '<div class="tstat"><div class="tsl">Date range</div><div class="tsv" style="font-size:13px;font-weight:700">'+esc(range)+'</div></div>';
 }
 /* Apply a filter set from the Overview, then jump to Tickets */
 function applyFilter(patch){
@@ -601,11 +661,24 @@ function openTicket(id){
   state.editTicket=t;
   $('#tmTitle').textContent=t.title||'Ticket';
   $('#tmId').textContent=t.ticketId+'  ·  reported by '+(t.csa||'—')+' ('+(t.client||'')+')';
-  $('#tmMeta').innerHTML=[
-    ['Category',(t.category||'')+(t.subcategory?' / '+t.subcategory:'')],['Priority',t.priority||''],
-    ['Impact',t.impact||''],['Submitted',t.submittedAt||''],['First response due',t.firstResponseDue||''],
-    ['Resolution due',t.resolutionDue||''],['Description',t.description||'']
-  ].map(function(kv){return '<div class="k">'+esc(kv[0])+'</div><div>'+esc(kv[1]||'—')+'</div>';}).join('');
+  // Every field submitted through the ticketing system, shown exactly as stored. Screenshot renders as a link.
+  var screenshotVal = t.screenshot
+    ? (/^https?:\/\//i.test(String(t.screenshot))
+        ? '<a href="'+esc(t.screenshot)+'" target="_blank" rel="noopener">View screenshot ↗</a>'
+        : esc(t.screenshot))
+    : '—';
+  var rows=[
+    ['Ticket ID',t.ticketId||''],['Status',t.status||''],['Priority',t.priority||''],['Impact',t.impact||''],
+    ['Category',t.category||''],['Subcategory',t.subcategory||''],
+    ['Reported by (CSA)',t.csa||''],['Client',t.client||''],['CSA schedule',t.schedule||''],['Ticket owner',t.owner||''],
+    ['Submitted',t.submittedAt||''],['Issue started',t.issueStarted||''],
+    ['First response due',t.firstResponseDue||''],['Resolution due',t.resolutionDue||''],
+    ['Resolved at',t.resolvedAt||''],['Last updated',t.lastUpdated||''],
+    ['Description',t.description||''],['Error message',t.errorMessage||''],['Troubleshooting tried',t.troubleshooting||'']
+  ];
+  $('#tmMeta').innerHTML=rows.map(function(kv){
+    return '<div class="k">'+esc(kv[0])+'</div><div>'+esc(kv[1]||'—')+'</div>';
+  }).join('') + '<div class="k">Screenshot</div><div>'+screenshotVal+'</div>';
   $('#tmStatus').value=t.status||'New'; $('#tmOwner').value=t.owner||''; $('#tmNote').value=''; $('#tmState').textContent='';
   $('#tov').classList.add('show');
 }
@@ -615,7 +688,11 @@ function saveTicket(){
   $('#tmState').textContent='Saving...'; $('#tmSave').disabled=true;
   api('updateTicket',payload).then(function(r){
     $('#tmSave').disabled=false;
-    if(r&&r.ok){ $('#tov').classList.remove('show'); toast(r.changed?'Saved. CSA notified.':'No changes to save.'); loadAll(); }
+    if(r&&r.ok){
+      toast(r.changed?'Saved. CSA notified.':'No changes to save.');
+      // Re-pull live data and re-render the detail card so it reflects the update automatically.
+      loadAll().then(function(){ if($('#tov').classList.contains('show')) openTicket(t.ticketId); });
+    }
     else { $('#tmState').textContent=(r&&r.error)||'Save failed'; }
   }).catch(function(){ $('#tmSave').disabled=false; $('#tmState').textContent='Network error'; });
 }
