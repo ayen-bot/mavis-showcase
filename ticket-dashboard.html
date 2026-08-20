@@ -286,6 +286,9 @@
       <div class="card" style="margin-bottom:18px"><div class="ch"><h3>Tech team workload</h3><span class="hint">Active tickets by owner</span></div><div class="cb" id="ovWorkload"></div></div>
       <div class="grid2" style="margin-bottom:18px">
         <div class="card"><div class="ch"><h3>Ticket categories</h3><span class="hint">What we get escalated most</span></div><div class="cb" id="ovCats"></div></div>
+        <div class="card insight" id="ovBackend"></div>
+      </div>
+      <div class="grid2" style="margin-bottom:18px">
         <div class="card trendcard">
           <div class="ch">
             <div><h3>Tickets Over Time</h3><div class="hint">Daily ticket volume</div></div>
@@ -293,15 +296,14 @@
           </div>
           <div class="cb"><div id="ovTrend"></div><div class="trendstats" id="ovTrendStats"></div></div>
         </div>
-      </div>
-      <div class="card trendcard" style="margin-bottom:18px">
-        <div class="ch">
-          <div><h3>Tickets raised</h3><div class="hint">Are escalations increasing?</div></div>
-          <div class="trendhead"><div class="seg" id="ovSeg"><button type="button" data-mode="weekly" class="on">Weekly</button><button type="button" data-mode="monthly">Monthly</button></div><span class="delta" id="ovRaisedDelta"></span></div>
+        <div class="card trendcard">
+          <div class="ch">
+            <div><h3>Tickets raised</h3><div class="hint">Are escalations increasing?</div></div>
+            <div class="trendhead"><div class="seg" id="ovSeg"><button type="button" data-mode="weekly" class="on">Weekly</button><button type="button" data-mode="monthly">Monthly</button></div><span class="delta" id="ovRaisedDelta"></span></div>
+          </div>
+          <div class="cb"><div id="ovRaised"></div></div>
         </div>
-        <div class="cb"><div id="ovRaised"></div></div>
       </div>
-      <div class="card insight" id="ovBackend"></div>
     </div>
 
     <!-- TICKETS -->
