@@ -1915,6 +1915,7 @@ __APP_JS__
   /* Paste the deployed Google Apps Script Web App URL here to log every ticket to
      the "CSA Tech - Ticket Log" sheet. Blank just skips logging (form still works). */
   var TICKET_LOG_URL="https://script.google.com/macros/s/AKfycbzu54CAbfBbSmjgxulSbqoDqF93y5WLTKxSIZqQAoh68ePAsLj4_Lzxbx-o8gB4Vt4kIA/exec";
+  try{ window.TICKET_LOG_URL=TICKET_LOG_URL; }catch(e){}  /* expose to the read-only Ticket Log section (separate script scope) */
   function logTicket(payload){
     if(!TICKET_LOG_URL) return Promise.resolve(null);
     return fetch(TICKET_LOG_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)})

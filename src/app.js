@@ -536,8 +536,10 @@ function mtOpen(id){
 }
 function mtLoad(){
   mtState.loading=true; mtState.err=''; mtRenderBody();
-  if(typeof TICKET_LOG_URL==='undefined' || !TICKET_LOG_URL){ mtState.loading=false; mtState.err='Ticket system not connected yet.'; mtRenderBody(); return; }
-  fetch(TICKET_LOG_URL+'?action=listTickets',{method:'GET'}).then(function(r){return r.text();}).then(function(tx){
+  // The form's TICKET_LOG_URL is scoped inside its IIFE, so read the global the template exposes; fall back to the known relay /exec.
+  var url=(typeof window!=='undefined'&&window.TICKET_LOG_URL)?window.TICKET_LOG_URL:(typeof TICKET_LOG_URL!=='undefined'&&TICKET_LOG_URL?TICKET_LOG_URL:'https://script.google.com/macros/s/AKfycbzu54CAbfBbSmjgxulSbqoDqF93y5WLTKxSIZqQAoh68ePAsLj4_Lzxbx-o8gB4Vt4kIA/exec');
+  if(!url){ mtState.loading=false; mtState.err='Ticket system not connected yet.'; mtRenderBody(); return; }
+  fetch(url+'?action=listTickets',{method:'GET'}).then(function(r){return r.text();}).then(function(tx){
     var j; try{ j=JSON.parse(tx); }catch(e){ j=null; }
     mtState.loading=false;
     if(j&&j.ok&&j.tickets){ mtState.tickets=j.tickets; mtState.loaded=true; mtState.err=''; }
