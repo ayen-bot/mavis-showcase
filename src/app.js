@@ -908,18 +908,68 @@ function wireCatalog(){
   });
   apply();
 }
+// ---- sample-workflow builders: turn a capability / integration into a "how it runs" flow ----
+function flowMarkup(head,nodes,steps,where){
+  return `<div class="discFlow"><div class="discFlowH">&#9654; ${esc(head)}</div>
+    <div class="discFlowRow">${nodes.map((n,i)=>`<div class="discNode"><span class="discNodeK">${esc(n.k)}</span><b>${esc(n.t)}</b></div>${i<nodes.length-1?'<span class="discArrow">&rarr;</span>':''}`).join('')}</div>
+    <ol class="discFlowSteps">${steps.map(s=>`<li>${s}</li>`).join('')}</ol>
+    <div class="capflowWhere"><b>Where MAVIS helps:</b> ${where}</div></div>`;
+}
+function capFlow(tool,cap){
+  const c=String(cap).replace(/\s*\.$/,'');
+  const lc=c.charAt(0).toLowerCase()+c.slice(1);
+  const nodes=[{k:'Trigger',t:'Request / schedule'},{k:'Connect',t:tool},{k:'Execute',t:'MAVIS'},{k:'Produce',t:'Result'},{k:'Deliver',t:'Review queue'}];
+  const steps=[
+    `You ask MAVIS &mdash; or set a schedule &mdash; to <b>${esc(lc)}</b>.`,
+    `MAVIS connects to <b>${esc(tool)}</b> through its API and signs in automatically. No keys to paste.`,
+    `It runs the operation end to end &mdash; pulling the right records, mapping the fields, paging through results, and retrying on any error.`,
+    `The result (or a confirmation) is filed to your review queue so you approve before anything is final.`,
+  ];
+  const where=`MAVIS removes the manual clicking in ${esc(tool)}. This runs hands-free, on demand or on a schedule, with a built-in check before anything goes out.`;
+  return flowMarkup('How MAVIS runs this',nodes,steps,where);
+}
+function comboFlow(a,b,desc){
+  const d=String(desc).replace(/\s*\.$/,'');
+  const nodes=[{k:'Trigger',t:a},{k:'Capture',t:'MAVIS'},{k:'Transform',t:'Map fields'},{k:'Action',t:b},{k:'Confirm',t:'Log + alert'}];
+  const steps=[
+    `A new or updated record in <b>${esc(a)}</b> triggers the workflow.`,
+    `MAVIS reads the event and validates the data via the ${esc(a)} API.`,
+    `It maps and transforms the fields into <b>${esc(b)}</b>&rsquo;s format.`,
+    `MAVIS ${esc(d)} in <b>${esc(b)}</b> &mdash; then logs the result and retries on errors.`,
+  ];
+  const where=`Two tools stay in sync automatically: ${esc(a)} and ${esc(b)} hand off without anyone re-keying the same data twice.`;
+  return flowMarkup('How this automation works',nodes,steps,where);
+}
+function toggleCapFlow(el,box,build){
+  if(!box) return;
+  const open=box.style.display!=='none';
+  if(open){ box.style.display='none'; el.classList.remove('open'); el.setAttribute('aria-expanded','false'); }
+  else{ if(!box.dataset.done){ box.innerHTML=build(); box.dataset.done='1'; } box.style.display='block'; el.classList.add('open'); el.setAttribute('aria-expanded','true'); }
+}
 function openCatalogTool(slug){
   const t=(DATA.catalog&&DATA.catalog.tools||[]).find(x=>x.slug===slug); if(!t) return;
-  const caps=(t.caps||[]).map(c=>`<div class="caprow">&bull; ${esc(c)}</div>`).join('')||'<div class="v" style="color:var(--muted)">—</div>';
+  const capList=(t.caps||[]);
+  const caps=capList.length?capList.map((c,i)=>`<div class="caprow caplink" data-cap="${i}" tabindex="0" role="button" aria-expanded="false"><span>&bull; ${esc(c)}</span><span class="caplinkcue">&#9654; sample workflow</span></div><div class="capflow" id="capflow-${i}" style="display:none"></div>`).join(''):'<div class="v" style="color:var(--muted)">—</div>';
   const its=toolIntegrations(t.display).slice(0,6);
-  const combos=its.length?its.map(i=>`<div class="caprow combo">&#9889; ${esc(i.tools.join(' + '))} &rarr; ${esc(i.desc)}</div>`).join(''):'<div class="v" style="color:var(--muted)">—</div>';
+  const combos=its.length?its.map((it,i)=>`<div class="caprow combo caplink" data-combo="${i}" tabindex="0" role="button" aria-expanded="false"><span>&#9889; ${esc(it.tools.join(' + '))} &rarr; ${esc(it.desc)}</span><span class="caplinkcue">&#9654; sample workflow</span></div><div class="capflow" id="comboflow-${i}" style="display:none"></div>`).join(''):'<div class="v" style="color:var(--muted)">—</div>';
   const aliases=(t.aliases||[]).length?` <span style="color:var(--muted);font-weight:500;font-size:13px">(${t.aliases.map(esc).join(', ')})</span>`:'';
   openDrawer(`<div class="dhead"><span class="dclose" data-close>&times;</span><h3>${esc(t.display)}${aliases}</h3><div class="meta">${esc(t.cat)}</div></div>
   <div class="dbody">
-    <div class="field"><div class="k">What MAVIS can automate with ${esc(t.display)}</div><div class="v">${caps}</div></div>
-    <div class="field"><div class="k">Example automations</div><div class="v">${combos}</div></div>
+    <div class="field"><div class="k">What MAVIS can automate with ${esc(t.display)}${capList.length?`<span class="capHint">&#9654; tap any capability for its sample workflow</span>`:''}</div><div class="v">${caps}</div></div>
+    <div class="field"><div class="k">Example automations${its.length?`<span class="capHint">&#9654; tap to see how it runs</span>`:''}</div><div class="v">${combos}</div></div>
     <div class="field"><div class="k">Connect via</div><div class="v">MAVIS connects to ${esc(t.display)} through its API / Pipedream &mdash; one of ${DATA.catalog.apps.toLocaleString()} apps MAVIS can orchestrate.</div></div>
   </div>`);
+  const dr=$('#drawer');
+  dr.querySelectorAll('.caprow.caplink[data-cap]').forEach(el=>{
+    const i=+el.dataset.cap, box=dr.querySelector('#capflow-'+i);
+    el.onclick=()=>toggleCapFlow(el,box,()=>capFlow(t.display,capList[i]));
+    el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); el.click(); } };
+  });
+  dr.querySelectorAll('.caprow.caplink[data-combo]').forEach(el=>{
+    const i=+el.dataset.combo, box=dr.querySelector('#comboflow-'+i), it=its[i];
+    el.onclick=()=>toggleCapFlow(el,box,()=>comboFlow(it.tools[0],it.tools[1]||'MAVIS',it.desc));
+    el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); el.click(); } };
+  });
 }
 
 // ---------- CSA enablement sections ----------
