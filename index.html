@@ -1605,6 +1605,7 @@ const VIEWS = [
   ['va','VA Toolkit','☰'],
   ['csatech','CSA Tech Manager','⚠'],
   ['mytickets','Ticket Log','🎫'],
+  ['campaignrag','Campaign RAG','🚦'],
   ['apibanks','API Banks','⛃'],
 ];
 const state = { view:'live', scope:'all', activeId:null, autoReveal:false };
@@ -1615,7 +1616,7 @@ const PAGE_TITLES = {
   links:'Links Bank',
   live:'Live MAVIS Analysis', sim:'MAVIS Simulator', deliverables:'What MAVIS Can Do',
   tools:'Tools', csa:'CSA', prospecting:'Prospecting & Lead Gen', va:'VA Toolkit',
-  csatech:'CSA Tech Manager', mytickets:'Ticket Log', apibanks:'API Banks', catalog:'Integration Library',
+  csatech:'CSA Tech Manager', mytickets:'Ticket Log', campaignrag:'Campaign RAG Status', apibanks:'API Banks', catalog:'Integration Library',
   discover:'Search', overview:'Overview', workflows:'Workflows', opportunities:'Opportunities',
   impact:'Impact', roadmap:'Roadmap',
 };
@@ -2132,6 +2133,404 @@ function wireMyTickets(){
   if(!mtState.loaded) mtLoad();
 }
 
+// ================= Campaign RAG Status ==================
+// Daily client health review across THREE categories (Task Completion, Task Quality,
+// Client Responsiveness & Communication), each Green/Amber/Red with an optional note
+// when Amber/Red. Overall Client Status is derived as the worst of the three, or
+// "Not Checked Today" until today's review is submitted.
+// SOURCE + BACKUP: the standalone "CSA Campaign RAG — Backup" Google Sheet via its own
+// Apps Script web app (separate from the ticket relay). listCampaigns = roster,
+// listRag = shared history, logRag = back up one update. Baked roster + localStorage
+// keep it working before the web app is connected.
+const CRAG_CACHE_KEY='crag_cache_v2';
+const CRAG_URL_KEY='crag_api_url';
+// Paste the deployed backup-sheet Web App URL here to bake it in for everyone, or leave
+// blank and connect it once from the section's "Connect backup sheet" box.
+const CRAG_API_URL='https://script.google.com/macros/s/AKfycbzwVXvNw1J3vVHTmX1R3bD0R9OQEaVFqMjvL5HRlHew1jHGEfzuvNBzazioBdyocwGy/exec';
+const CRAG_ROSTER=[
+  ['Structural Prime Builder INC','Anna Macaya'],['THE NYBB GROUP, LLC.','Anna Macaya'],
+  ['ATS Group','Matthew Conopio'],['Majestic Property Management, Inc','Chris Uddin'],
+  ['Souk Systems (MAVIS)','Chris Uddin'],['PayDiverse, LLC.','Ericka Meged'],
+  ['Western Optical Supply Inc','Jerickson Fugaban'],['The Little Lighthouse Foundation','Taye Kimberly'],
+  ['Knowbility','Floricel Villanueva'],['Diamond Mind','Rose Ann Bocado'],
+  ['The Firm - Miami','Harry Sadiwa'],['Cowley Associates, Inc.','Mark Denver Galaroza'],
+  ['Dickens Consulting Group','Rose Ann Bocado'],['Khader Law','Nikka Kathleen Abatayo'],
+  ['Tactical & Rescue Gear, Ltd.','Matthew Conopio'],['Avery Prep Tutoring','Mark Denver Galaroza'],
+  ['Trends LLC','Ngozi Kerry'],['Indian Mill Plank','Jerickson Fugaban'],['Polite Properties','Harry Sadiwa']
+];
+// three assessed categories: key, full label (form), short label (table header), note field
+const CRAG_CATS=[
+  { key:'tc', label:'Task Completion', short:'Task Completion',
+    G:'On track and being completed', A:'Some delays or incomplete tasks', R:'Significant or ongoing delays' },
+  { key:'tq', label:'Task Quality', short:'Task Quality',
+    G:'Work meets expectations', A:'Minor issues or improvements needed', R:'Frequent or significant quality concerns' },
+  { key:'cm', label:'Client Responsiveness & Communication', short:'Responsiveness & Comms',
+    G:'Responsive and positive communication', A:'Slow or occasional communication concerns', R:'Unresponsive or significant comms issues' }
+];
+const CRAG_RAG={
+  G:{dot:'🟢',short:'Green',word:'Green',cls:'crag-g'},
+  A:{dot:'🟠',short:'Amber',word:'Amber',cls:'crag-a'},
+  R:{dot:'🔴',short:'Red',word:'Red',cls:'crag-r'}
+};
+const CRAG_OVR={
+  G:{dot:'🟢',short:'Healthy',word:'Green',cls:'crag-g'},
+  A:{dot:'🟠',short:'Needs Attention',word:'Amber',cls:'crag-a'},
+  R:{dot:'🔴',short:'At Risk',word:'Red',cls:'crag-r'},
+  NC:{dot:'⚪',short:'Not Checked Today',word:'Not Checked Today',cls:'crag-nc'}
+};
+const cragModel={ campaigns:[], syncing:false, err:'', backup:'unknown', loadedAt:'' };
+const cragState={ filter:'all', q:'' };
+function cragApi(){ if(CRAG_API_URL) return CRAG_API_URL; try{ return localStorage.getItem(CRAG_URL_KEY)||''; }catch(e){ return ''; } }
+function cragSetApi(u){ try{ localStorage.setItem(CRAG_URL_KEY, String(u||'').trim()); }catch(e){} }
+function cragPad(n){ return (n<10?'0':'')+n; }
+function cragDaysAgo(n){ var d=new Date(); d.setDate(d.getDate()-n); return d.getFullYear()+'-'+cragPad(d.getMonth()+1)+'-'+cragPad(d.getDate()); }
+function cragToday(){ return cragDaysAgo(0); }
+function cragNowTs(){ try{ return new Date().toISOString(); }catch(e){ return ''; } }
+function cragFmtDate(s){ if(!s) return '—'; var p=String(s).split(' ')[0].split('-'); if(p.length<3) return String(s); var mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return mo[(+p[1])-1]+' '+(+p[2]); }
+function cragCode(v){ var s=String(v||'').trim().toLowerCase(); if(s[0]==='g') return 'G'; if(s[0]==='a') return 'A'; if(s[0]==='r') return 'R'; return ''; }
+function cragCampId(campaign,csa){ return String(campaign||'').trim()+'||'+String(csa||'').trim(); }
+function cragWorst(codes){ var has={}; codes.forEach(function(c){ if(c) has[c]=1; }); if(has.R) return 'R'; if(has.A) return 'A'; if(codes.length&&codes.every(function(c){return c==='G';})) return 'G'; return codes.indexOf('G')>=0?'G':''; }
+function cragUpdOverall(u){ if(!u) return ''; return cragWorst([u.tc,u.tq,u.cm]); }
+
+// ---------- data model ----------
+function cragSorted(c){ return (c.updates||[]).slice().sort(function(a,b){ if(a.date!==b.date) return a.date<b.date?1:-1; return (a.ts||'')<(b.ts||'')?1:-1; }); }
+function cragCurrent(c){ var s=cragSorted(c); return s.length?s[0]:null; }
+function cragTodayUpdate(c){ var t=cragToday(); return (c.updates||[]).filter(function(u){return u.date===t;})[0]||null; }
+function cragUpdatedToday(c){ return !!cragTodayUpdate(c); }
+function cragOverallState(c){ var t=cragTodayUpdate(c); if(!t) return 'NC'; return cragUpdOverall(t)||'NC'; }
+function cragCampaign(id){ return cragModel.campaigns.filter(function(c){return c.id===id;})[0]||null; }
+function cragBuildModel(campRows,ragRows){
+  var map={}, order=[];
+  (campRows||[]).forEach(function(r){
+    var campaign=String(r.campaign||'').trim(); if(!campaign) return;
+    var csa=String(r.csa||'').trim();
+    var id=cragCampId(campaign,csa);
+    if(!map[id]){ map[id]={ id:id, name:campaign, csa:csa, updates:[], fromSource:true }; order.push(id); }
+  });
+  (ragRows||[]).forEach(function(u){
+    var campaign=String(u.campaign||'').trim(); if(!campaign) return;
+    var csa=String(u.csa||'').trim();
+    var id=cragCampId(campaign,csa);
+    if(!map[id]){ var alt=order.filter(function(k){return map[k].name===campaign;})[0];
+      if(alt){ id=alt; } else { map[id]={ id:id, name:campaign, csa:csa, updates:[], fromSource:false }; order.push(id); } }
+    var tc=cragCode(u.taskCompletion!=null?u.taskCompletion:u.tc);
+    var tq=cragCode(u.taskQuality!=null?u.taskQuality:u.tq);
+    var cm=cragCode(u.communication!=null?u.communication:u.cm);
+    if(!tc&&!tq&&!cm) return;
+    map[id].updates.push({ date:String(u.date||'').split(' ')[0], csa:csa||map[id].csa, tc:tc, tq:tq, cm:cm,
+      tcNote:u.completionNote||u.tcNote||'', tqNote:u.qualityNote||u.tqNote||'', cmNote:u.commsNote||u.cmNote||'', ts:u.ts||'' });
+  });
+  return order.map(function(k){return map[k];});
+}
+function cragCacheSave(){ try{ localStorage.setItem(CRAG_CACHE_KEY, JSON.stringify({ campaigns:cragModel.campaigns, at:cragNowTs() })); }catch(e){} }
+function cragCacheLoad(){ try{ var raw=localStorage.getItem(CRAG_CACHE_KEY); if(raw){ var j=JSON.parse(raw); if(j&&Array.isArray(j.campaigns)){ cragModel.campaigns=j.campaigns; cragModel.loadedAt=j.at||''; return true; } } }catch(e){} return false; }
+
+// ---------- sync ----------
+function cragGet(action){ var u=cragApi(); if(!u) return Promise.reject('no-url'); return fetch(u+'?action='+action,{method:'GET'}).then(function(r){return r.json();}); }
+function cragRosterRows(){ return CRAG_ROSTER.map(function(p){ return { campaign:p[0], csa:p[1] }; }); }
+function cragMergeLocalInto(built){
+  var byId={}; (cragModel.campaigns||[]).forEach(function(c){ byId[c.id]=c; });
+  built.forEach(function(c){ var old=byId[c.id]; if(!old||!old.updates) return;
+    old.updates.forEach(function(ou){ var hit=c.updates.filter(function(x){return x.date===ou.date;})[0];
+      if(!hit) c.updates.push(ou); else if(ou.pending) hit.pending=true; }); });
+  return built;
+}
+function cragSync(){
+  var u=cragApi();
+  if(!u){ cragModel.syncing=false; cragModel.backup='local';
+    cragModel.err='Backup sheet not connected yet — reviews save on this device. Add the Web App URL below to sync.';
+    cragModel.campaigns=cragMergeLocalInto(cragBuildModel(cragRosterRows(), []));
+    cragCacheSave(); cragRenderAll(); return; }
+  cragModel.syncing=true; cragRenderStatus();
+  Promise.all([ cragGet('listCampaigns').catch(function(){return null;}), cragGet('listRag').catch(function(){return null;}) ])
+    .then(function(res){
+      var campRes=res[0], ragRes=res[1]; cragModel.syncing=false;
+      if(campRes && campRes.ok && campRes.campaigns){
+        var ragRows=(ragRes && ragRes.ok && ragRes.rag) ? ragRes.rag : [];
+        cragModel.backup=(ragRes && ragRes.ok && ragRes.rag) ? 'live' : 'local';
+        cragModel.campaigns=cragMergeLocalInto(cragBuildModel(campRes.campaigns, ragRows));
+        cragModel.err=(cragModel.backup==='live') ? '' : 'Connected, but the RAG Log could not be read — check the deployment.';
+        cragCacheSave();
+      } else { cragModel.backup='local';
+        cragModel.err='Could not reach the backup sheet — showing local data. Check the Web App URL.';
+        if(!cragModel.campaigns.length) cragModel.campaigns=cragBuildModel(cragRosterRows(), []); }
+      cragRenderAll();
+    });
+}
+
+// ---------- css ----------
+function cragInjectCss(){
+  if(document.getElementById('cragCss')) return;
+  var css=`
+  .cragWrap{max-width:1240px}
+  .cragHead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+  .cragTitle{margin:0;font-size:26px;letter-spacing:-.02em;color:var(--ink)}
+  .cragSub{margin:6px 0 0;color:var(--muted);font-size:14px;max-width:720px;line-height:1.5}
+  .cragBtn{border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600;font-size:13px;padding:9px 14px;border-radius:9px;cursor:pointer}
+  .cragBtn:hover{background:var(--surface2)}
+  .cragBtnP{border-color:transparent;background:var(--cyan,#06B6D4);color:#04222b}
+  .cragBtnP:hover{filter:brightness(1.05);background:var(--cyan,#06B6D4)}
+  .cragTools{display:flex;gap:8px;flex-wrap:wrap}
+  .cragConn{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:14px;flex-wrap:wrap}
+  .cragDot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+  .cragDot.live{background:#10B981}.cragDot.local{background:#F59E0B}
+  .cragStats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .cragStat{border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:10px 14px;min-width:118px;cursor:pointer;transition:border-color .12s}
+  .cragStat:hover{border-color:var(--muted)}
+  .cragStat.on{border-color:var(--cyan,#06B6D4);box-shadow:0 0 0 1px var(--cyan,#06B6D4) inset}
+  .cragStat .n{font-size:22px;font-weight:800;color:var(--ink);line-height:1}
+  .cragStat .l{font-size:11.5px;color:var(--muted);margin-top:5px}
+  .cragBar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .cragChips{display:flex;gap:6px;flex-wrap:wrap}
+  .cragChip{border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:20px;cursor:pointer}
+  .cragChip:hover{background:var(--surface2)}
+  .cragChip.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+  .cragSearch{position:relative;flex:1;min-width:200px}
+  .cragSearch input{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:10px 12px 10px 34px;font-size:14px}
+  .cragSearch span{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:.6}
+  .cragTWrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
+  .cragTable{width:100%;border-collapse:collapse;background:var(--surface);min-width:960px}
+  .cragTable th{text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:11px 12px;background:var(--surface2);border-bottom:1px solid var(--line);white-space:nowrap}
+  .cragTable td{padding:11px 12px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle;font-size:13.5px}
+  .cragTable tr:last-child td{border-bottom:0}
+  .cragTable tbody tr:hover{background:var(--surface2)}
+  .cragCliName{font-weight:700;color:var(--ink)}
+  .cragCliCsa{color:var(--muted)}
+  .cragNotes{color:var(--ink2,var(--ink));font-size:12.5px;max-width:280px;line-height:1.4}
+  .cragNoteSeg{display:block;margin-bottom:2px}
+  .cragNoteSeg b{font-weight:700}
+  .cragMut{color:var(--muted)}
+  .cragBadge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:14px;border:1px solid;white-space:nowrap}
+  .crag-g{color:#047857;background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.34)}
+  .crag-a{color:#B45309;background:rgba(245,158,11,.16);border-color:rgba(245,158,11,.34)}
+  .crag-r{color:#B42318;background:rgba(220,45,32,.12);border-color:rgba(220,45,32,.32)}
+  .crag-nc{color:#475569;background:rgba(100,116,139,.14);border-color:rgba(100,116,139,.30)}
+  .cragRowActs{display:flex;gap:6px;white-space:nowrap}
+  .cragMini{border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600;font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer}
+  .cragMini:hover{background:var(--surface2)}
+  .cragMini.p{border-color:transparent;background:var(--cyan,#06B6D4);color:#04222b}
+  .cragPendDot{color:#B45309;font-size:11px;margin-left:5px}
+  .cragEmpty{padding:34px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:12px;background:var(--surface)}
+  .cragOv{position:fixed;inset:0;background:rgba(2,6,23,.55);display:none;align-items:center;justify-content:center;z-index:2000;padding:18px}
+  .cragOv.open{display:flex}
+  .cragModal{background:var(--surface);border:1px solid var(--line);border-radius:16px;width:100%;max-width:600px;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  .cragModal.wide{max-width:900px}
+  .cragMh{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
+  .cragMh .t{font-size:17px;font-weight:750;color:var(--ink)}
+  .cragMh .s{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .cragX{border:0;background:transparent;font-size:24px;line-height:1;color:var(--muted);cursor:pointer}
+  .cragBody{padding:18px 20px}
+  .cragFld{margin-bottom:14px}
+  .cragFld>label{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px}
+  .cragRO{font-size:14px;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+  .cragCat{border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:12px;background:var(--surface2)}
+  .cragCatH{font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:9px}
+  .cragSeg{display:flex;gap:7px;flex-wrap:wrap}
+  .cragSegBtn{flex:1;min-width:96px;border:2px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 9px;cursor:pointer;font-size:12.5px;font-weight:650;color:var(--ink);text-align:center}
+  .cragSegBtn small{display:block;font-weight:500;color:var(--muted);font-size:10.5px;margin-top:2px;line-height:1.25}
+  .cragSegBtn.sel.g{border-color:#10B981;background:rgba(16,185,129,.10)}
+  .cragSegBtn.sel.a{border-color:#F59E0B;background:rgba(245,158,11,.12)}
+  .cragSegBtn.sel.r{border-color:#EF4444;background:rgba(239,68,68,.10)}
+  .cragNote{margin-top:9px}
+  .cragNote textarea{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:8px 11px;font-size:13.5px;font-family:inherit;box-sizing:border-box;resize:vertical;min-height:46px}
+  .cragNote.hide{display:none}
+  .cragCount{font-size:11px;color:var(--muted);text-align:right;margin-top:3px}
+  .cragOvrRow{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;margin-top:2px;font-size:13px;color:var(--muted)}
+  .cragMf{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 20px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--surface)}
+  .cragErr{color:#B42318;font-size:12.5px;font-weight:600}
+  .cragHTable{width:100%;border-collapse:collapse;font-size:12.5px}
+  .cragHTable th{text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:9px 10px;background:var(--surface2);border-bottom:1px solid var(--line);white-space:nowrap}
+  .cragHTable td{padding:9px 10px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:top}
+  .cragHTable tr:last-child td{border-bottom:0}
+  .cragHTable td.dt{white-space:nowrap;color:var(--muted);font-weight:600}
+  `;
+  var st=document.createElement('style'); st.id='cragCss'; st.textContent=css; document.head.appendChild(st);
+}
+
+// ---------- shell + renders ----------
+function viewCampaignRag(){
+  cragInjectCss();
+  return '<div class="cragWrap">'
+    +'<div class="cragHead"><div>'
+      +'<h1 class="cragTitle">🚦 Client Health — Daily RAG</h1>'
+      +'<p class="cragSub">A daily 30-second review of every client across three areas: Task Completion, Task Quality, and Client Responsiveness &amp; Communication. Overall status is the worst of the three. If a category is Amber or Red, add a short note. Every review backs up to the CSA Campaign RAG sheet.</p>'
+    +'</div><div class="cragTools">'
+      +'<button class="cragBtn cragBtnP" id="cragRefresh">↻ Refresh</button>'
+      +'<button class="cragBtn" id="cragExport">↧ Export</button>'
+    +'</div></div>'
+    +'<div class="cragConn" id="cragConn"></div>'
+    +'<div id="cragSetup"></div>'
+    +'<div class="cragStats" id="cragStats"></div>'
+    +'<div class="cragBar">'
+      +'<div class="cragChips" id="cragChips"></div>'
+      +'<div class="cragSearch"><span>🔍</span><input id="cragQ" placeholder="Search client or CSA…"></div>'
+    +'</div>'
+    +'<div id="cragTableWrap"></div>'
+    +'<div class="cragOv" id="cragOv"><div class="cragModal" id="cragModal"></div></div>'
+    +'</div>';
+}
+function cragRenderAll(){ cragRenderStatus(); cragRenderSetup(); cragRenderStats(); cragRenderChips(); cragRenderTable(); }
+function cragRenderStatus(){
+  var wrap=$('#cragConn'); if(!wrap) return; var bits=[];
+  if(cragModel.syncing){ bits.push('<span class="cragDot"></span> Syncing with the backup sheet…'); }
+  else if(cragModel.backup==='live'){ bits.push('<span class="cragDot live"></span> Backed up to the CSA Campaign RAG sheet'); }
+  else if(cragModel.backup==='local'){ bits.push('<span class="cragDot local"></span> Saving on this device only'); }
+  else { bits.push('<span class="cragDot"></span> Not synced yet'); }
+  if(cragModel.err) bits.push('<span style="color:var(--warn,#B45309)">'+esc(cragModel.err)+'</span>');
+  wrap.innerHTML=bits.join(' &nbsp;·&nbsp; ');
+}
+function cragRenderSetup(){
+  var wrap=$('#cragSetup'); if(!wrap) return;
+  if(cragApi()){ wrap.innerHTML=''; return; }
+  wrap.innerHTML='<div style="border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:12px 14px;margin-bottom:14px">'
+    +'<div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Connect the backup sheet: paste the deployed <b style="color:var(--ink)">Campaign RAG backup</b> Web App URL to sync every review to the shared sheet.</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap"><input id="cragUrl" class="cragRO" style="flex:1;min-width:240px;background:var(--surface)" placeholder="https://script.google.com/macros/s/…/exec"><button class="cragBtn cragBtnP" id="cragUrlSave">Save &amp; Sync</button></div></div>';
+  var b=$('#cragUrlSave'); if(b) b.onclick=function(){ var v=($('#cragUrl').value||'').trim(); if(!/^https:\/\/script\.google\.com\//.test(v)){ alert('Paste the full Web App URL (…script.google.com/macros/s/…/exec).'); return; } cragSetApi(v); cragSync(); };
+}
+function cragCounts(){
+  var cs=cragModel.campaigns||[]; var out={all:cs.length,G:0,A:0,R:0,NC:0};
+  cs.forEach(function(c){ var s=cragOverallState(c); if(out[s]!==undefined)out[s]++; });
+  return out;
+}
+function cragRenderStats(){
+  var wrap=$('#cragStats'); if(!wrap) return; var k=cragCounts();
+  var tiles=[['all','All Clients',k.all],['G','🟢 Healthy',k.G],['A','🟠 Needs Attention',k.A],['R','🔴 At Risk',k.R],['NC','⚪ Not Checked Today',k.NC]];
+  wrap.innerHTML=tiles.map(function(t){ return '<div class="cragStat'+(cragState.filter===t[0]?' on':'')+'" data-f="'+t[0]+'"><div class="n">'+t[2]+'</div><div class="l">'+t[1]+'</div></div>'; }).join('');
+  wrap.querySelectorAll('.cragStat').forEach(function(s){ s.onclick=function(){ cragState.filter=s.getAttribute('data-f'); cragRenderChips(); cragRenderStats(); cragRenderTable(); }; });
+}
+function cragRenderChips(){
+  var wrap=$('#cragChips'); if(!wrap) return;
+  var chips=[['all','All'],['G','🟢 Healthy'],['A','🟠 Needs Attention'],['R','🔴 At Risk'],['NC','⚪ Not Checked Today']];
+  wrap.innerHTML=chips.map(function(c){ return '<button class="cragChip'+(cragState.filter===c[0]?' on':'')+'" data-f="'+c[0]+'">'+c[1]+'</button>'; }).join('');
+  wrap.querySelectorAll('.cragChip').forEach(function(b){ b.onclick=function(){ cragState.filter=b.getAttribute('data-f'); cragRenderChips(); cragRenderStats(); cragRenderTable(); }; });
+}
+function cragMatchesFilter(c){ var f=cragState.filter; if(f==='all') return true; return cragOverallState(c)===f; }
+function cragCatBadge(code){ var m=CRAG_RAG[code]; if(!m) return '<span class="cragMut">—</span>'; return '<span class="cragBadge '+m.cls+'">'+m.dot+' '+m.short+'</span>'; }
+function cragOvrBadge(state){ var m=CRAG_OVR[state]||CRAG_OVR.NC; return '<span class="cragBadge '+m.cls+'">'+m.dot+' '+m.short+'</span>'; }
+function cragNotesCell(c){
+  var cur=cragCurrent(c); if(!cur) return '<span class="cragMut">—</span>';
+  var segs=[];
+  CRAG_CATS.forEach(function(cat){ var code=cur[cat.key]; var note=cur[cat.key+'Note'];
+    if((code==='A'||code==='R') && note) segs.push('<span class="cragNoteSeg"><b>'+esc(cat.short)+':</b> '+esc(note)+'</span>'); });
+  if(!segs.length) return '<span class="cragMut">—</span>';
+  return '<div class="cragNotes">'+segs.join('')+'</div>';
+}
+function cragRenderTable(){
+  var wrap=$('#cragTableWrap'); if(!wrap) return;
+  if(cragModel.syncing && !cragModel.campaigns.length){ wrap.innerHTML='<div class="cragEmpty">Loading clients from the backup sheet…</div>'; return; }
+  var q=(cragState.q||'').trim().toLowerCase();
+  var list=(cragModel.campaigns||[]).filter(function(c){
+    if(!cragMatchesFilter(c)) return false;
+    if(q){ if((c.name+' '+(c.csa||'')).toLowerCase().indexOf(q)<0) return false; }
+    return true;
+  });
+  if(!list.length){ wrap.innerHTML='<div class="cragEmpty">'+((cragModel.campaigns||[]).length?'No clients match this view.':'No clients found. Click ↻ Refresh.')+'</div>'; return; }
+  var rows=list.map(function(c){
+    var cur=cragCurrent(c); var pend=cur&&cur.pending;
+    return '<tr>'
+      +'<td><div class="cragCliName">'+esc(c.name)+(pend?'<span class="cragPendDot" title="backup pending">⧗</span>':'')+'</div></td>'
+      +'<td class="cragCliCsa">'+esc(c.csa||'Unassigned')+'</td>'
+      +'<td>'+cragCatBadge(cur?cur.tc:'')+'</td>'
+      +'<td>'+cragCatBadge(cur?cur.tq:'')+'</td>'
+      +'<td>'+cragCatBadge(cur?cur.cm:'')+'</td>'
+      +'<td>'+cragOvrBadge(cragOverallState(c))+'</td>'
+      +'<td>'+cragNotesCell(c)+'</td>'
+      +'<td><div class="cragRowActs"><button class="cragMini p" data-upd="'+esc(c.id)+'">Update</button><button class="cragMini" data-hist="'+esc(c.id)+'">History</button></div></td>'
+      +'</tr>';
+  }).join('');
+  wrap.innerHTML='<div class="cragTWrap"><table class="cragTable"><thead><tr>'
+    +'<th>Client Name</th><th>Assigned CSA</th><th>Task Completion</th><th>Task Quality</th><th>Responsiveness &amp; Comms</th><th>Overall Client Status</th><th>CSA Notes</th><th></th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+  wrap.querySelectorAll('[data-upd]').forEach(function(b){ b.onclick=function(){ cragOpenForm(b.getAttribute('data-upd')); }; });
+  wrap.querySelectorAll('[data-hist]').forEach(function(b){ b.onclick=function(){ cragOpenHistory(b.getAttribute('data-hist')); }; });
+}
+function cragCloseModal(){ var ov=$('#cragOv'); if(ov) ov.classList.remove('open'); }
+function cragOpenForm(id){
+  var c=cragCampaign(id); if(!c) return; var today=cragToday();
+  var ex=cragTodayUpdate(c);
+  var picks={ tc:ex?ex.tc:'', tq:ex?ex.tq:'', cm:ex?ex.cm:'' };
+  var notes={ tc:ex?ex.tcNote:'', tq:ex?ex.tqNote:'', cm:ex?ex.cmNote:'' };
+  var catHtml=CRAG_CATS.map(function(cat){
+    var segs=[['G','g','Green',cat.G],['A','a','Amber',cat.A],['R','r','Red',cat.R]].map(function(o){
+      return '<button type="button" class="cragSegBtn '+o[1]+(picks[cat.key]===o[0]?' sel':'')+'" data-cat="'+cat.key+'" data-rag="'+o[0]+'">'+CRAG_RAG[o[0]].dot+' '+o[2]+'<small>'+esc(o[3])+'</small></button>'; }).join('');
+    var show=(picks[cat.key]==='A'||picks[cat.key]==='R');
+    return '<div class="cragCat"><div class="cragCatH">'+esc(cat.label)+'</div><div class="cragSeg" data-catseg="'+cat.key+'">'+segs+'</div>'
+      +'<div class="cragNote'+(show?'':' hide')+'" id="cragNoteWrap_'+cat.key+'"><textarea id="cragNote_'+cat.key+'" data-note="'+cat.key+'" maxlength="200" placeholder="Short note: why Amber/Red?">'+esc(notes[cat.key]||'')+'</textarea><div class="cragCount" id="cragNoteC_'+cat.key+'"></div></div></div>';
+  }).join('');
+  var m=$('#cragModal'); if(!m) return; m.className='cragModal';
+  m.innerHTML='<div class="cragMh"><div><div class="t">Daily Client Review</div><div class="s">'+(ex?'Editing today&rsquo;s review':'New review for today')+'</div></div><button class="cragX" id="cragMx">×</button></div>'
+    +'<div class="cragBody">'
+      +'<div class="cragFld"><label>Client</label><div class="cragRO">'+esc(c.name)+'</div></div>'
+      +'<div style="display:flex;gap:12px"><div class="cragFld" style="flex:1"><label>CSA</label><div class="cragRO">'+esc(c.csa||'Unassigned')+'</div></div>'
+        +'<div class="cragFld" style="flex:1"><label>Date</label><div class="cragRO">'+esc(cragFmtDate(today))+'</div></div></div>'
+      +catHtml
+      +'<div class="cragOvrRow" id="cragOvrPreview">Overall Client Status: <span id="cragOvrVal">'+cragOvrBadge('NC')+'</span></div>'
+    +'</div>'
+    +'<div class="cragMf"><span class="cragErr" id="cragErr"></span><span style="display:flex;gap:8px"><button class="cragBtn" id="cragCancel">Cancel</button><button class="cragBtn cragBtnP" id="cragSave">Save Review</button></span></div>';
+  function refreshOverall(){ var w=cragWorst([picks.tc,picks.tq,picks.cm]); var st=(picks.tc&&picks.tq&&picks.cm)?(w||'G'):'NC'; var v=$('#cragOvrVal'); if(v) v.innerHTML=cragOvrBadge(st); }
+  m.querySelectorAll('.cragSegBtn').forEach(function(b){ b.onclick=function(){
+    var cat=b.getAttribute('data-cat'), rag=b.getAttribute('data-rag'); picks[cat]=rag;
+    m.querySelectorAll('.cragSegBtn[data-cat="'+cat+'"]').forEach(function(x){x.classList.remove('sel');}); b.classList.add('sel');
+    var nw=$('#cragNoteWrap_'+cat); if(nw) nw.classList.toggle('hide', !(rag==='A'||rag==='R'));
+    var e=$('#cragErr'); if(e) e.textContent=''; refreshOverall();
+  }; });
+  CRAG_CATS.forEach(function(cat){ var t=$('#cragNote_'+cat.key), o=$('#cragNoteC_'+cat.key);
+    function cnt(){ if(t&&o)o.textContent=t.value.length+' / 200'; } if(t){ t.oninput=cnt; } cnt(); });
+  refreshOverall();
+  $('#cragMx').onclick=cragCloseModal; $('#cragCancel').onclick=cragCloseModal;
+  $('#cragSave').onclick=function(){
+    if(!picks.tc||!picks.tq||!picks.cm){ $('#cragErr').textContent='Rate all three categories first.'; return; }
+    cragSaveReview(id, picks, { tc:($('#cragNote_tc').value||''), tq:($('#cragNote_tq').value||''), cm:($('#cragNote_cm').value||'') });
+  };
+  var ov=$('#cragOv'); ov.classList.add('open'); ov.onclick=function(e){ if(e.target===ov) cragCloseModal(); };
+}
+function cragSaveReview(id, picks, notes){
+  var c=cragCampaign(id); if(!c) return; if(!c.updates)c.updates=[]; var today=cragToday();
+  function nt(k){ return (picks[k]==='A'||picks[k]==='R') ? String(notes[k]||'').slice(0,200).trim() : ''; }
+  var rec={ date:today, csa:c.csa||'', tc:picks.tc, tq:picks.tq, cm:picks.cm,
+    tcNote:nt('tc'), tqNote:nt('tq'), cmNote:nt('cm'), ts:cragNowTs(), pending:true };
+  var idx=-1; for(var i=0;i<c.updates.length;i++){ if(c.updates[i].date===today){ idx=i; break; } }
+  if(idx>=0) c.updates[idx]=rec; else c.updates.push(rec);
+  cragCacheSave(); cragCloseModal(); cragRenderStats(); cragRenderTable();
+  var u=cragApi(); if(!u) return;
+  var overall=cragWorst([rec.tc,rec.tq,rec.cm])||'G';
+  var body={ action:'logRag', campaign:c.name, csa:c.csa||'', date:today,
+    taskCompletion:CRAG_RAG[rec.tc].word, taskQuality:CRAG_RAG[rec.tq].word, communication:CRAG_RAG[rec.cm].word,
+    overall:CRAG_OVR[overall]?CRAG_OVR[overall].word:'', completionNote:rec.tcNote, qualityNote:rec.tqNote, commsNote:rec.cmNote };
+  fetch(u,{ method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) })
+    .then(function(r){ return r.json(); })
+    .then(function(j){ if(j&&j.ok){ rec.pending=false; cragModel.backup='live'; cragCacheSave(); cragRenderStatus(); cragRenderTable(); } })
+    .catch(function(){});
+}
+function cragOpenHistory(id){
+  var c=cragCampaign(id); if(!c) return; var rows=cragSorted(c);
+  function noteLines(u){ var s=[]; CRAG_CATS.forEach(function(cat){ var n=u[cat.key+'Note']; if((u[cat.key]==='A'||u[cat.key]==='R')&&n) s.push('<div><b>'+esc(cat.short)+':</b> '+esc(n)+'</div>'); }); return s.length?s.join(''):'<span class="cragMut">—</span>'; }
+  var body=rows.length?rows.map(function(u){
+    return '<tr><td class="dt">'+esc(cragFmtDate(u.date))+'</td>'
+      +'<td>'+cragCatBadge(u.tc)+'</td><td>'+cragCatBadge(u.tq)+'</td><td>'+cragCatBadge(u.cm)+'</td>'
+      +'<td>'+cragOvrBadge(cragUpdOverall(u)||'NC')+'</td>'
+      +'<td>'+noteLines(u)+'</td></tr>';
+  }).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No reviews logged yet.</td></tr>';
+  var m=$('#cragModal'); if(!m) return; m.className='cragModal wide';
+  m.innerHTML='<div class="cragMh"><div><div class="t">Review History — '+esc(c.name)+'</div><div class="s">Assigned CSA: '+esc(c.csa||'Unassigned')+'</div></div><button class="cragX" id="cragMx">×</button></div>'
+    +'<div class="cragBody" style="padding:0"><table class="cragHTable"><thead><tr><th>Date</th><th>Task Completion</th><th>Task Quality</th><th>Responsiveness &amp; Comms</th><th>Overall</th><th>Notes</th></tr></thead><tbody>'+body+'</tbody></table></div>'
+    +'<div class="cragMf" style="justify-content:flex-end"><button class="cragBtn cragBtnP" id="cragFromHist">+ Add / Edit Today</button></div>';
+  $('#cragMx').onclick=cragCloseModal; $('#cragFromHist').onclick=function(){ cragOpenForm(id); };
+  var ov=$('#cragOv'); ov.classList.add('open'); ov.onclick=function(e){ if(e.target===ov) cragCloseModal(); };
+}
+function cragExport(){
+  try{ var blob=new Blob([JSON.stringify({campaigns:cragModel.campaigns,exportedAt:cragNowTs()},null,2)],{type:'application/json'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='client-health-rag.json';
+    document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },100);
+  }catch(e){ alert('Export failed.'); }
+}
+function wireCampaignRag(){
+  cragInjectCss(); cragCacheLoad(); cragRenderAll();
+  var rf=$('#cragRefresh'); if(rf) rf.onclick=cragSync;
+  var ex=$('#cragExport'); if(ex) ex.onclick=cragExport;
+  var q=$('#cragQ'); if(q){ q.value=cragState.q; q.oninput=function(){ cragState.q=this.value; cragRenderTable(); }; }
+  cragSync();
+}
 // ---------- views ----------
 function render(){
   const v=$('#view');
@@ -2145,6 +2544,7 @@ function render(){
   else if(state.view==='csa'){ v.innerHTML=viewCSA(); wireCSA(); }
   else if(state.view==='csatech'){ v.innerHTML=viewCSATech(); wireCSATech(); }
   else if(state.view==='mytickets'){ v.innerHTML=viewMyTickets(); wireMyTickets(); }
+  else if(state.view==='campaignrag'){ v.innerHTML=viewCampaignRag(); wireCampaignRag(); }
   else if(state.view==='apibanks'){ v.innerHTML=viewApiBanks(); wireApiBanks(); }
   else if(state.view==='links'){ v.innerHTML=viewLinks(); wireLinks(); }
   else if(state.view==='prospecting'){ v.innerHTML=viewProspecting(); wireProspecting(); }
@@ -2153,7 +2553,7 @@ function render(){
   else if(state.view==='deliverables'){ v.innerHTML=viewDeliverables(); wireDeliverables(); }
   else if(state.view==='live'){ v.innerHTML=viewLive(); wireLive(); }
   else if(state.view==='discover'){ v.innerHTML=viewDiscover(discQ); wireDiscover(); }
-  const hideChrome=['deliverables','tools','catalog','csa','csatech','mytickets','apibanks','prospecting','va','sim','links'].includes(state.view);
+  const hideChrome=['deliverables','tools','catalog','csa','csatech','mytickets','campaignrag','apibanks','prospecting','va','sim','links'].includes(state.view);
   const tc=document.querySelector('.topcontrols'); if(tc) tc.classList.toggle('hide', hideChrome);
   const vbar=document.querySelector('#vertbar'), vres=document.querySelector('#vertResults'); if(vbar) vbar.classList.toggle('hide', hideChrome); if(vres) vres.classList.toggle('hide', hideChrome);
   // The MAVIS title header shows only on the Live Analysis view; the whole topbar hides on chrome-less views.
