@@ -611,7 +611,15 @@ function cragPad(n){ return (n<10?'0':'')+n; }
 function cragDaysAgo(n){ var d=new Date(); d.setDate(d.getDate()-n); return d.getFullYear()+'-'+cragPad(d.getMonth()+1)+'-'+cragPad(d.getDate()); }
 function cragToday(){ return cragDaysAgo(0); }
 function cragNowTs(){ try{ return new Date().toISOString(); }catch(e){ return ''; } }
-function cragFmtDate(s){ if(!s) return '—'; var p=String(s).split(' ')[0].split('-'); if(p.length<3) return String(s); var mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return mo[(+p[1])-1]+' '+(+p[2]); }
+function cragFmtDate(s){ if(!s) return '—'; var p=String(cragNormDate(s)).split(' ')[0].split('-'); if(p.length<3) return String(s); var mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return mo[(+p[1])-1]+' '+(+p[2]); }
+// Normalize any date the backup sheet hands back into YYYY-MM-DD. The sheet can
+// return a raw JS Date string ("Tue Sep 15 2026 17:00:00 GMT-0700"); left as-is the
+// old code kept only "Tue", which broke the today-match (all cards 0) and showed a weekday.
+function cragNormDate(s){ s=String(s||'').trim(); if(!s) return '';
+  var iso=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(iso) return iso[1]+'-'+iso[2]+'-'+iso[3];
+  var mo={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+  var m=s.match(/\b([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{4})\b/); if(m&&mo[m[1]]) return m[3]+'-'+mo[m[1]]+'-'+cragPad(+m[2]);
+  return s.split(' ')[0]; }
 function cragCode(v){ var s=String(v||'').trim().toLowerCase(); if(s[0]==='g') return 'G'; if(s[0]==='a') return 'A'; if(s[0]==='r') return 'R'; return ''; }
 function cragCampId(campaign,csa){ return String(campaign||'').trim()+'||'+String(csa||'').trim(); }
 function cragWorst(codes){ var has={}; codes.forEach(function(c){ if(c) has[c]=1; }); if(has.R) return 'R'; if(has.A) return 'A'; if(codes.length&&codes.every(function(c){return c==='G';})) return 'G'; return codes.indexOf('G')>=0?'G':''; }
@@ -642,13 +650,13 @@ function cragBuildModel(campRows,ragRows){
     var tq=cragCode(u.taskQuality!=null?u.taskQuality:u.tq);
     var cm=cragCode(u.communication!=null?u.communication:u.cm);
     if(!tc&&!tq&&!cm) return;
-    map[id].updates.push({ date:String(u.date||'').split(' ')[0], csa:csa||map[id].csa, tc:tc, tq:tq, cm:cm,
+    map[id].updates.push({ date:cragNormDate(u.date), csa:csa||map[id].csa, tc:tc, tq:tq, cm:cm,
       tcNote:u.completionNote||u.tcNote||'', tqNote:u.qualityNote||u.tqNote||'', cmNote:u.commsNote||u.cmNote||'', ts:u.ts||'' });
   });
   return order.map(function(k){return map[k];});
 }
 function cragCacheSave(){ try{ localStorage.setItem(CRAG_CACHE_KEY, JSON.stringify({ campaigns:cragModel.campaigns, at:cragNowTs() })); }catch(e){} }
-function cragCacheLoad(){ try{ var raw=localStorage.getItem(CRAG_CACHE_KEY); if(raw){ var j=JSON.parse(raw); if(j&&Array.isArray(j.campaigns)){ cragModel.campaigns=j.campaigns; cragModel.loadedAt=j.at||''; return true; } } }catch(e){} return false; }
+function cragCacheLoad(){ try{ var raw=localStorage.getItem(CRAG_CACHE_KEY); if(raw){ var j=JSON.parse(raw); if(j&&Array.isArray(j.campaigns)){ j.campaigns.forEach(function(c){ (c.updates||[]).forEach(function(u){ u.date=cragNormDate(u.date); }); }); cragModel.campaigns=j.campaigns; cragModel.loadedAt=j.at||''; return true; } } }catch(e){} return false; }
 
 // ---------- sync ----------
 function cragGet(action){ var u=cragApi(); if(!u) return Promise.reject('no-url'); return fetch(u+'?action='+action,{method:'GET'}).then(function(r){return r.json();}); }
