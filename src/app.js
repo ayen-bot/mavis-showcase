@@ -603,7 +603,7 @@ const CRAG_OVR={
   R:{dot:'🔴',short:'At Risk',word:'Red',cls:'crag-r'},
   NC:{dot:'⚪',short:'Not Checked Today',word:'Not Checked Today',cls:'crag-nc'}
 };
-const cragModel={ campaigns:[], syncing:false, err:'', backup:'unknown', loadedAt:'' };
+const cragModel={ campaigns:[], weekly:[], syncing:false, err:'', backup:'unknown', loadedAt:'' };
 const cragState={ filter:'all', q:'' };
 function cragApi(){ if(CRAG_API_URL) return CRAG_API_URL; try{ return localStorage.getItem(CRAG_URL_KEY)||''; }catch(e){ return ''; } }
 function cragSetApi(u){ try{ localStorage.setItem(CRAG_URL_KEY, String(u||'').trim()); }catch(e){} }
@@ -675,9 +675,10 @@ function cragSync(){
     cragModel.campaigns=cragMergeLocalInto(cragBuildModel(cragRosterRows(), []));
     cragCacheSave(); cragRenderAll(); return; }
   cragModel.syncing=true; cragRenderStatus();
-  Promise.all([ cragGet('listCampaigns').catch(function(){return null;}), cragGet('listRag').catch(function(){return null;}) ])
+  Promise.all([ cragGet('listCampaigns').catch(function(){return null;}), cragGet('listRag').catch(function(){return null;}), cragGet('listWeekly').catch(function(){return null;}) ])
     .then(function(res){
-      var campRes=res[0], ragRes=res[1]; cragModel.syncing=false;
+      var campRes=res[0], ragRes=res[1], weekRes=res[2]; cragModel.syncing=false;
+      if(weekRes && weekRes.ok && weekRes.weekly){ cragModel.weekly=cragWeeklyMerge(weekRes.weekly); cragWeeklyCacheSave(); }
       if(campRes && campRes.ok && campRes.campaigns){
         var ragRows=(ragRes && ragRes.ok && ragRes.rag) ? ragRes.rag : [];
         cragModel.backup=(ragRes && ragRes.ok && ragRes.rag) ? 'live' : 'local';
@@ -776,6 +777,11 @@ function cragInjectCss(){
   .cragHTable td{padding:9px 10px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:top}
   .cragHTable tr:last-child td{border-bottom:0}
   .cragHTable td.dt{white-space:nowrap;color:var(--muted);font-weight:600}
+  .cragWkTop{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .cragWkStat{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);background:var(--surface2);border:1px solid var(--line);border-radius:9px;padding:6px 10px}
+  .cragWkStat b{color:var(--ink)}
+  .cragWkHint{font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:14px;padding:9px 12px;border:1px dashed var(--line);border-radius:10px;background:var(--surface2)}
+  .cragWkTa{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:9px 11px;font-size:13px;font-family:inherit;box-sizing:border-box;resize:vertical;min-height:64px;line-height:1.5;white-space:pre-wrap}
   `;
   var st=document.createElement('style'); st.id='cragCss'; st.textContent=css; document.head.appendChild(st);
 }
@@ -868,7 +874,7 @@ function cragRenderTable(){
       +'<td>'+cragCatBadge(cur?cur.cm:'')+'</td>'
       +'<td>'+cragOvrBadge(cragOverallState(c))+'</td>'
       +'<td>'+cragNotesCell(c)+'</td>'
-      +'<td><div class="cragRowActs"><button class="cragMini p" data-upd="'+esc(c.id)+'">Update</button><button class="cragMini" data-hist="'+esc(c.id)+'">History</button></div></td>'
+      +'<td><div class="cragRowActs"><button class="cragMini p" data-upd="'+esc(c.id)+'">Update</button><button class="cragMini" data-hist="'+esc(c.id)+'">History</button><button class="cragMini" data-wk="'+esc(c.id)+'">Weekly</button></div></td>'
       +'</tr>';
   }).join('');
   wrap.innerHTML='<div class="cragTWrap"><table class="cragTable"><thead><tr>'
@@ -876,6 +882,7 @@ function cragRenderTable(){
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
   wrap.querySelectorAll('[data-upd]').forEach(function(b){ b.onclick=function(){ cragOpenForm(b.getAttribute('data-upd')); }; });
   wrap.querySelectorAll('[data-hist]').forEach(function(b){ b.onclick=function(){ cragOpenHistory(b.getAttribute('data-hist')); }; });
+  wrap.querySelectorAll('[data-wk]').forEach(function(b){ b.onclick=function(){ cragOpenWeekly(b.getAttribute('data-wk')); }; });
 }
 function cragCloseModal(){ var ov=$('#cragOv'); if(ov) ov.classList.remove('open'); }
 function cragOpenForm(id){
@@ -951,6 +958,179 @@ function cragOpenHistory(id){
   $('#cragMx').onclick=cragCloseModal; $('#cragFromHist').onclick=function(){ cragOpenForm(id); };
   var ov=$('#cragOv'); ov.classList.add('open'); ov.onclick=function(e){ if(e.target===ov) cragCloseModal(); };
 }
+
+// ================= Weekly Analysis & Summary ==================
+// Auto-compiles each campaign's daily RAG entries for a Mon–Sun week into an EDITABLE
+// draft summary. Daily entries are the source of truth and are never changed. Finalized
+// summaries persist to the backup sheet's "Weekly Summary" tab (listWeekly/saveWeekly)
+// with a localStorage cache + pending flag, mirroring the daily flow. If the deployed
+// Apps Script doesn't support those actions yet, summaries save on-device and sync later.
+const CRAG_WEEKLY_KEY='crag_weekly_v1';
+const CRAG_WK_FIELDS=[
+  ['wins','Key progress & wins'],
+  ['blockers','Recurring blockers, issues & risks'],
+  ['drivers','Main drivers behind the RAG status'],
+  ['tasks','Tasks completed / delayed / carried forward'],
+  ['changes','Status changes through the week'],
+  ['nextFocus','Recommended focus for next week']
+];
+const CRAG_TREND={ up:{cls:'crag-g',txt:'Improved',dot:'▲'}, down:{cls:'crag-r',txt:'Declined',dot:'▼'}, flat:{cls:'crag-nc',txt:'Stable',dot:'▬'}, na:{cls:'crag-nc',txt:'n/a',dot:'—'} };
+function cragRank(code){ return code==='R'?2:(code==='A'?1:(code==='G'?0:-1)); }
+function cragWordFull(code){ return code==='G'?'Green':(code==='A'?'Amber':(code==='R'?'Red':'Not set')); }
+// --- week math (Mon–Sun) ---
+function cragDateObj(s){ var p=cragNormDate(s).split('-'); if(p.length<3) return null; return new Date(+p[0],(+p[1])-1,+p[2]); }
+function cragYmd(d){ return d.getFullYear()+'-'+cragPad(d.getMonth()+1)+'-'+cragPad(d.getDate()); }
+function cragWeekStart(s){ var d=cragDateObj(s)||cragDateObj(cragToday()); var dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); return cragYmd(d); }
+function cragWeekEnd(ws){ var d=cragDateObj(ws); if(!d) return ws; d.setDate(d.getDate()+6); return cragYmd(d); }
+function cragWeekLabel(ws){ var we=cragWeekEnd(ws); var tag=(ws===cragWeekStart(cragToday()))?' (this week)':''; return cragFmtDate(ws)+' – '+cragFmtDate(we)+tag; }
+function cragWeeksFor(c){
+  var set={}; (c.updates||[]).forEach(function(u){ var d=cragNormDate(u.date); if(d) set[cragWeekStart(d)]=1; });
+  set[cragWeekStart(cragToday())]=1;
+  (cragModel.weekly||[]).forEach(function(w){ if(String(w.campaign||'').trim()===c.name) set[cragNormDate(w.weekStart)]=1; });
+  return Object.keys(set).sort().reverse();
+}
+function cragWeekUpdates(c, ws){ var we=cragWeekEnd(ws);
+  return (c.updates||[]).filter(function(u){ var d=cragNormDate(u.date); return d && d>=ws && d<=we; })
+    .slice().sort(function(a,b){ return cragNormDate(a.date)<cragNormDate(b.date)?-1:1; }); }
+function cragCatSeq(ups,key){ return ups.map(function(u){ return { date:cragNormDate(u.date), code:u[key], note:u[key+'Note']||'' }; }); }
+// --- the deterministic draft engine ---
+function cragBuildWeekly(c, ws){
+  var we=cragWeekEnd(ws); var ups=cragWeekUpdates(c, ws);
+  var draft={ campaign:c.name, csa:c.csa||'', weekStart:ws, weekEnd:we, overall:'', trend:'na',
+    daysReviewed:ups.length, wins:'', blockers:'', drivers:'', tasks:'', changes:'', nextFocus:'', state:'draft' };
+  if(!ups.length){
+    draft.wins='No daily reviews were logged this week, so there is nothing to summarize yet.';
+    draft.blockers='n/a'; draft.drivers='n/a'; draft.tasks='n/a'; draft.changes='n/a';
+    draft.nextFocus='Log the daily review for this client so next week has data to summarize.';
+    return draft;
+  }
+  var CATS=CRAG_CATS;
+  var first=ups[0], last=ups[ups.length-1];
+  var fOv=cragUpdOverall(first), lOv=cragUpdOverall(last);
+  draft.overall=lOv||'';
+  if(ups.length===1) draft.trend='flat';
+  else { var rf=cragRank(fOv), rl=cragRank(lOv); draft.trend=(rl<rf)?'up':((rl>rf)?'down':'flat'); }
+  // wins: green on last day + any recovery across the week
+  var wins=[];
+  CATS.forEach(function(cat){ if(last[cat.key]==='G') wins.push(cat.short+' is Green'); });
+  CATS.forEach(function(cat){ var seq=cragCatSeq(ups,cat.key); var e=seq[0].code, l=seq[seq.length-1].code;
+    if(cragRank(e)>=0 && cragRank(l)>=0 && cragRank(l)<cragRank(e)) wins.push(cat.short+' recovered from '+cragWordFull(e)+' to '+cragWordFull(l)); });
+  draft.wins = wins.length ? ('• '+wins.join('\n• ')) : 'No standout wins flagged. Note: the daily form only saves a note when a category is Amber or Red, so Green days may hold wins that were not written down.';
+  // recurring blockers: A/R notes per category
+  var blk=[];
+  CATS.forEach(function(cat){ var seq=cragCatSeq(ups,cat.key); var flagged=seq.filter(function(x){ return x.code==='A'||x.code==='R'; });
+    if(!flagged.length) return;
+    var notes=flagged.filter(function(x){return x.note;}).map(function(x){ return cragFmtDate(x.date)+': '+x.note; });
+    var recur=flagged.length>=2?(' (recurring '+flagged.length+'×)'):'';
+    blk.push(cat.short+recur+' — '+(notes.length?notes.join(' | '):('flagged '+flagged.map(function(x){return cragFmtDate(x.date);}).join(', ')+', no note left'))); });
+  draft.blockers = blk.length ? ('• '+blk.join('\n• ')) : 'No Amber or Red flags this week.';
+  // drivers: which category held the worst rating on A/R days
+  var driveCount={};
+  ups.forEach(function(u){ var ov=cragUpdOverall(u); if(ov==='A'||ov==='R'){ var worst=Math.max(cragRank(u.tc),cragRank(u.tq),cragRank(u.cm));
+    CATS.forEach(function(cat){ if(cragRank(u[cat.key])===worst) driveCount[cat.short]=(driveCount[cat.short]||0)+1; }); } });
+  var drivers=Object.keys(driveCount).sort(function(a,b){ return driveCount[b]-driveCount[a]; });
+  draft.drivers = drivers.length ? ('• '+drivers.map(function(k){ return k+' drove the status on '+driveCount[k]+' day'+(driveCount[k]>1?'s':''); }).join('\n• ')) : 'Status stayed Green all week; no category dragged it down.';
+  // tasks: best-effort from the ending state + notes
+  var done=[], carried=[];
+  CATS.forEach(function(cat){ if(last[cat.key]==='G') done.push(cat.short+' on track'); });
+  CATS.forEach(function(cat){ if(last[cat.key]==='A'||last[cat.key]==='R'){ var n=last[cat.key+'Note']; carried.push(cat.short+(n?(' — '+n):'')); } });
+  var tparts=[];
+  if(done.length) tparts.push('On track / completed:\n• '+done.join('\n• '));
+  if(carried.length) tparts.push('Carried forward / at risk:\n• '+carried.join('\n• '));
+  draft.tasks = tparts.length ? tparts.join('\n') : 'No specific tasks captured in the notes this week. Edit to add completed, delayed, or carried-over items.';
+  // status changes: overall transitions day to day
+  var chg=[]; var prev=null, prevDate=null;
+  ups.forEach(function(u){ var ov=cragUpdOverall(u); var d=cragFmtDate(cragNormDate(u.date));
+    if(prev===null){ prev=ov; prevDate=d; return; }
+    if(ov!==prev){ chg.push(prevDate+' '+cragWordFull(prev)+' → '+d+' '+cragWordFull(ov)); prev=ov; prevDate=d; } });
+  draft.changes = chg.length ? ('• '+chg.join('\n• ')) : ('Held at '+cragWordFull(lOv)+' across all '+ups.length+' logged day'+(ups.length>1?'s':'')+'.');
+  // recommended focus: ending A/R categories + the top driver
+  var foc=[];
+  CATS.forEach(function(cat){ if(last[cat.key]==='A'||last[cat.key]==='R'){ var n=last[cat.key+'Note']; foc.push('Address '+cat.short+(n?(' ('+n+')'):'')); } });
+  if(drivers.length && foc.join(' ').indexOf(drivers[0])<0) foc.push('Watch '+drivers[0]+', the main driver this week');
+  if(!foc.length) foc.push('Maintain the current cadence — keep comms proactive and keep logging the daily review.');
+  draft.nextFocus='• '+foc.join('\n• ');
+  return draft;
+}
+// --- persistence (sheet + localStorage cache) ---
+function cragWeeklyKey(campaign, ws){ return String(campaign||'').trim()+'||'+cragNormDate(ws); }
+function cragWeeklySaved(campaign, ws){ var k=cragWeeklyKey(campaign,ws); return (cragModel.weekly||[]).filter(function(w){ return cragWeeklyKey(w.campaign,w.weekStart)===k; })[0]||null; }
+function cragOvrFromWord(w){ w=String(w||'').trim().toLowerCase(); if(!w) return ''; if(w[0]==='g'||w.indexOf('health')===0) return 'G'; if(w[0]==='a'||w.indexOf('need')===0) return 'A'; if(w[0]==='r'||w.indexOf('risk')>=0) return 'R'; return ''; }
+function cragTrendKey(t){ t=String(t||'').trim().toLowerCase(); if(t.indexOf('impro')===0) return 'up'; if(t.indexOf('decl')===0) return 'down'; if(t.indexOf('stab')===0) return 'flat'; if(t==='up'||t==='down'||t==='flat'||t==='na') return t; return 'na'; }
+function cragWeeklyMerge(rows){
+  var built=(rows||[]).map(function(w){ return {
+    campaign:String(w.campaign||'').trim(), csa:w.csa||'', weekStart:cragNormDate(w.weekStart), weekEnd:cragNormDate(w.weekEnd),
+    overall:cragOvrFromWord(w.overall), trend:cragTrendKey(w.trend), daysReviewed:parseInt(String(w.daysReviewed),10)||0,
+    wins:w.wins||'', blockers:w.blockers||'', drivers:w.drivers||'', tasks:w.tasks||'', changes:w.changes||'', nextFocus:w.nextFocus||'',
+    state:w.state||'final', editedBy:w.editedBy||'', ts:w.ts||'' }; });
+  var byKey={}; built.forEach(function(w){ byKey[cragWeeklyKey(w.campaign,w.weekStart)]=w; });
+  (cragModel.weekly||[]).forEach(function(w){ if(w.pending) byKey[cragWeeklyKey(w.campaign,w.weekStart)]=w; });
+  return Object.keys(byKey).map(function(k){ return byKey[k]; });
+}
+function cragWeeklyCacheSave(){ try{ localStorage.setItem(CRAG_WEEKLY_KEY, JSON.stringify({ weekly:cragModel.weekly, at:cragNowTs() })); }catch(e){} }
+function cragWeeklyCacheLoad(){ try{ var raw=localStorage.getItem(CRAG_WEEKLY_KEY); if(raw){ var j=JSON.parse(raw); if(j&&Array.isArray(j.weekly)){ cragModel.weekly=j.weekly; return true; } } }catch(e){} return false; }
+// --- modal ---
+function cragOpenWeekly(id, ws){ var c=cragCampaign(id); if(!c) return; var weeks=cragWeeksFor(c); if(!ws) ws=weeks[0];
+  cragWeeklyRender(c, ws); var ov=$('#cragOv'); ov.classList.add('open'); ov.onclick=function(e){ if(e.target===ov) cragCloseModal(); }; }
+function cragWeeklyRender(c, ws){
+  var m=$('#cragModal'); if(!m) return; m.className='cragModal wide';
+  var saved=cragWeeklySaved(c.name, ws);
+  var data=saved?saved:cragBuildWeekly(c, ws);
+  var weeks=cragWeeksFor(c); var ups=cragWeekUpdates(c, ws);
+  var weekOpts=weeks.map(function(w){ return '<option value="'+esc(w)+'"'+(w===ws?' selected':'')+'>'+esc(cragWeekLabel(w))+'</option>'; }).join('');
+  var tr=CRAG_TREND[data.trend]||CRAG_TREND.na;
+  var savedTag=saved?'<span class="cragBadge crag-g">✓ Finalized</span>':'<span class="cragBadge crag-nc">Draft (auto)</span>';
+  var fields=CRAG_WK_FIELDS.map(function(f){ return '<div class="cragFld"><label>'+esc(f[1])+'</label><textarea class="cragWkTa" data-wk="'+f[0]+'" rows="3">'+esc(data[f[0]]||'')+'</textarea></div>'; }).join('');
+  var dayRows=ups.length?ups.map(function(u){ return '<tr><td class="dt">'+esc(cragFmtDate(u.date))+'</td>'
+    +'<td>'+cragCatBadge(u.tc)+'</td><td>'+cragCatBadge(u.tq)+'</td><td>'+cragCatBadge(u.cm)+'</td>'
+    +'<td>'+cragOvrBadge(cragUpdOverall(u)||'NC')+'</td></tr>'; }).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">No daily reviews logged in this week.</td></tr>';
+  m.innerHTML='<div class="cragMh"><div><div class="t">Weekly Analysis &amp; Summary — '+esc(c.name)+'</div><div class="s">Assigned CSA: '+esc(c.csa||'Unassigned')+'</div></div><button class="cragX" id="cragMx">×</button></div>'
+    +'<div class="cragBody">'
+      +'<div class="cragFld"><label>Week</label><select id="cragWkSel" class="cragRO" style="width:100%">'+weekOpts+'</select></div>'
+      +'<div class="cragWkTop">'
+        +'<span class="cragWkStat">Overall weekly RAG: '+cragOvrBadge(data.overall||'NC')+'</span>'
+        +'<span class="cragWkStat">Trend: <span class="cragBadge '+tr.cls+'">'+tr.dot+' '+tr.txt+'</span></span>'
+        +'<span class="cragWkStat">Reviewed <b>'+ups.length+'</b> of 7 days</span>'
+        +savedTag
+      +'</div>'
+      +'<div class="cragWkHint">Auto-drafted from this week&rsquo;s daily entries. Edit anything, then Save &amp; Finalize. The original daily entries are never changed.</div>'
+      +fields
+      +'<div class="cragFld"><label>Daily entries this week (source of truth)</label>'
+        +'<table class="cragHTable"><thead><tr><th>Date</th><th>Task Completion</th><th>Task Quality</th><th>Comms</th><th>Overall</th></tr></thead><tbody>'+dayRows+'</tbody></table></div>'
+    +'</div>'
+    +'<div class="cragMf"><span class="cragErr" id="cragWkErr"></span><span style="display:flex;gap:8px">'
+      +'<button class="cragBtn" id="cragWkRegen">↻ Regenerate from data</button>'
+      +'<button class="cragBtn cragBtnP" id="cragWkSave">Save &amp; Finalize</button>'
+    +'</span></div>';
+  $('#cragMx').onclick=cragCloseModal;
+  $('#cragWkSel').onchange=function(){ cragWeeklyRender(c, this.value); };
+  $('#cragWkRegen').onclick=function(){ var fresh=cragBuildWeekly(c, ws);
+    CRAG_WK_FIELDS.forEach(function(f){ var ta=m.querySelector('.cragWkTa[data-wk="'+f[0]+'"]'); if(ta) ta.value=fresh[f[0]]||''; });
+    var e=$('#cragWkErr'); if(e){ e.style.color='var(--muted)'; e.textContent='Redrafted from the latest daily entries (not saved yet).'; } };
+  $('#cragWkSave').onclick=function(){ cragWeeklySave(c, ws); };
+}
+function cragWeeklySave(c, ws){
+  var m=$('#cragModal'); if(!m) return;
+  var base=cragBuildWeekly(c, ws);
+  var rec={ campaign:c.name, csa:c.csa||'', weekStart:ws, weekEnd:cragWeekEnd(ws), overall:base.overall, trend:base.trend,
+    daysReviewed:cragWeekUpdates(c,ws).length, state:'final', editedBy:((typeof mtState!=='undefined'&&mtState.csa)||''), ts:cragNowTs(), pending:true };
+  CRAG_WK_FIELDS.forEach(function(f){ var ta=m.querySelector('.cragWkTa[data-wk="'+f[0]+'"]'); rec[f[0]]=ta?String(ta.value||'').slice(0,8000):''; });
+  var k=cragWeeklyKey(rec.campaign, rec.weekStart);
+  cragModel.weekly=(cragModel.weekly||[]).filter(function(w){ return cragWeeklyKey(w.campaign,w.weekStart)!==k; });
+  cragModel.weekly.push(rec); cragWeeklyCacheSave();
+  cragWeeklyRender(c, ws);
+  var e=$('#cragWkErr'); if(e){ e.style.color='var(--muted)'; e.textContent=cragApi()?'Saved on this device, syncing to the sheet…':'Saved on this device. Connect the backup sheet to share across CSAs.'; }
+  var u=cragApi(); if(!u) return;
+  var body={ action:'saveWeekly', campaign:rec.campaign, csa:rec.csa, weekStart:rec.weekStart, weekEnd:rec.weekEnd,
+    overall:cragWordFull(rec.overall), trend:(CRAG_TREND[rec.trend]||CRAG_TREND.na).txt, daysReviewed:rec.daysReviewed+'/7',
+    wins:rec.wins, blockers:rec.blockers, drivers:rec.drivers, tasks:rec.tasks, changes:rec.changes, nextFocus:rec.nextFocus,
+    state:'final', editedBy:rec.editedBy };
+  fetch(u,{ method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) })
+    .then(function(r){ return r.json(); })
+    .then(function(j){ if(j&&j.ok){ rec.pending=false; cragWeeklyCacheSave(); var e2=$('#cragWkErr'); if(e2){ e2.style.color='var(--muted)'; e2.textContent='Saved and synced to the Weekly Summary sheet.'; } }
+      else { var e3=$('#cragWkErr'); if(e3){ e3.style.color='var(--muted)'; e3.textContent='Saved on this device. Sheet did not accept it yet (redeploy the Apps Script to enable weekly sync).'; } } })
+    .catch(function(){});
+}
 function cragExport(){
   try{ var blob=new Blob([JSON.stringify({campaigns:cragModel.campaigns,exportedAt:cragNowTs()},null,2)],{type:'application/json'});
     var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='client-health-rag.json';
@@ -958,7 +1138,7 @@ function cragExport(){
   }catch(e){ alert('Export failed.'); }
 }
 function wireCampaignRag(){
-  cragInjectCss(); cragCacheLoad(); cragRenderAll();
+  cragInjectCss(); cragCacheLoad(); cragWeeklyCacheLoad(); cragRenderAll();
   var rf=$('#cragRefresh'); if(rf) rf.onclick=cragSync;
   var ex=$('#cragExport'); if(ex) ex.onclick=cragExport;
   var q=$('#cragQ'); if(q){ q.value=cragState.q; q.oninput=function(){ cragState.q=this.value; cragRenderTable(); }; }
