@@ -2231,16 +2231,31 @@ function cragBuildModel(campRows,ragRows){
   return order.map(function(k){return map[k];});
 }
 function cragCacheSave(){ try{ localStorage.setItem(CRAG_CACHE_KEY, JSON.stringify({ campaigns:cragModel.campaigns, at:cragNowTs() })); }catch(e){} }
-function cragCacheLoad(){ try{ var raw=localStorage.getItem(CRAG_CACHE_KEY); if(raw){ var j=JSON.parse(raw); if(j&&Array.isArray(j.campaigns)){ j.campaigns.forEach(function(c){ (c.updates||[]).forEach(function(u){ u.date=cragNormDate(u.date); }); }); cragModel.campaigns=j.campaigns; cragModel.loadedAt=j.at||''; return true; } } }catch(e){} return false; }
+function cragCacheLoad(){ try{ var raw=localStorage.getItem(CRAG_CACHE_KEY); if(raw){ var j=JSON.parse(raw); if(j&&Array.isArray(j.campaigns)){ j.campaigns.forEach(function(c){ c.updates=cragDedupeUpdates(c.updates); }); cragModel.campaigns=j.campaigns; cragModel.loadedAt=j.at||''; return true; } } }catch(e){} return false; }
 
 // ---------- sync ----------
 function cragGet(action){ var u=cragApi(); if(!u) return Promise.reject('no-url'); return fetch(u+'?action='+action,{method:'GET'}).then(function(r){return r.json();}); }
 function cragRosterRows(){ return CRAG_ROSTER.map(function(p){ return { campaign:p[0], csa:p[1] }; }); }
+function cragValidDate(d){ return /^\d{4}-\d{2}-\d{2}$/.test(String(d||'')); }
+// Collapse a campaign's updates to one per calendar day. Drops corrupted remnants
+// (e.g. a bare "Tue" left in an old cache before the date fix) and, when the same day
+// appears twice, keeps the sheet-confirmed row over a pending one, then the latest ts.
+function cragDedupeUpdates(list){
+  var seen={};
+  (list||[]).forEach(function(u){ u.date=cragNormDate(u.date); if(!cragValidDate(u.date)) return;
+    var e=seen[u.date];
+    if(!e){ seen[u.date]=u; return; }
+    var better=(!!e.pending && !u.pending) || ((!!e.pending===!!u.pending) && (u.ts||'')>=(e.ts||''));
+    if(better) seen[u.date]=u; });
+  return Object.keys(seen).map(function(k){ return seen[k]; });
+}
 function cragMergeLocalInto(built){
   var byId={}; (cragModel.campaigns||[]).forEach(function(c){ byId[c.id]=c; });
-  built.forEach(function(c){ var old=byId[c.id]; if(!old||!old.updates) return;
-    old.updates.forEach(function(ou){ var hit=c.updates.filter(function(x){return x.date===ou.date;})[0];
-      if(!hit) c.updates.push(ou); else if(ou.pending) hit.pending=true; }); });
+  built.forEach(function(c){ var old=byId[c.id];
+    if(old&&old.updates){ old.updates.forEach(function(ou){ if(!ou.pending) return; // only keep locally-unsynced reviews; the sheet is authoritative
+      var d=cragNormDate(ou.date); if(!cragValidDate(d)) return; var hit=c.updates.filter(function(x){return x.date===d;})[0];
+      if(!hit){ ou.date=d; c.updates.push(ou); } else { hit.pending=true; } }); }
+    c.updates=cragDedupeUpdates(c.updates); });
   return built;
 }
 function cragSync(){
@@ -2357,6 +2372,12 @@ function cragInjectCss(){
   .cragWkStat b{color:var(--ink)}
   .cragWkHint{font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:14px;padding:9px 12px;border:1px dashed var(--line);border-radius:10px;background:var(--surface2)}
   .cragWkTa{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:9px 11px;font-size:13px;font-family:inherit;box-sizing:border-box;resize:vertical;min-height:64px;line-height:1.5;white-space:pre-wrap}
+  .cragDrop{position:relative}
+  .cragMenu{position:absolute;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 34px rgba(0,0,0,.32);padding:6px;display:none;z-index:1200;min-width:210px}
+  .cragMenu.open{display:block}
+  .cragMenuLbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:7px 10px 3px}
+  .cragMenuItem{display:block;width:100%;text-align:left;border:0;background:transparent;color:var(--ink);font-size:13px;font-weight:600;padding:9px 11px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .cragMenuItem:hover{background:var(--surface2)}
   `;
   var st=document.createElement('style'); st.id='cragCss'; st.textContent=css; document.head.appendChild(st);
 }
@@ -2370,7 +2391,16 @@ function viewCampaignRag(){
       +'<p class="cragSub">A daily 30-second review of every client across three areas: Task Completion, Task Quality, and Client Responsiveness &amp; Communication. Overall status is the worst of the three. If a category is Amber or Red, add a short note. Every review backs up to the CSA Campaign RAG sheet.</p>'
     +'</div><div class="cragTools">'
       +'<button class="cragBtn cragBtnP" id="cragRefresh">↻ Refresh</button>'
-      +'<button class="cragBtn" id="cragExport">↧ Export</button>'
+      +'<div class="cragDrop" id="cragExportWrap">'
+        +'<button class="cragBtn" id="cragExportBtn">↧ Export ▾</button>'
+        +'<div class="cragMenu" id="cragExportMenu">'
+          +'<div class="cragMenuLbl">RAG report (PDF)</div>'
+          +'<button class="cragMenuItem" data-exp="week">This week</button>'
+          +'<button class="cragMenuItem" data-exp="month">This month</button>'
+          +'<div class="cragMenuLbl">Backup</div>'
+          +'<button class="cragMenuItem" data-exp="json">Data backup (JSON)</button>'
+        +'</div>'
+      +'</div>'
     +'</div></div>'
     +'<div class="cragConn" id="cragConn"></div>'
     +'<div id="cragSetup"></div>'
@@ -2568,15 +2598,21 @@ function cragWeekUpdates(c, ws){ var we=cragWeekEnd(ws);
   return (c.updates||[]).filter(function(u){ var d=cragNormDate(u.date); return d && d>=ws && d<=we; })
     .slice().sort(function(a,b){ return cragNormDate(a.date)<cragNormDate(b.date)?-1:1; }); }
 function cragCatSeq(ups,key){ return ups.map(function(u){ return { date:cragNormDate(u.date), code:u[key], note:u[key+'Note']||'' }; }); }
-// --- the deterministic draft engine ---
-function cragBuildWeekly(c, ws){
-  var we=cragWeekEnd(ws); var ups=cragWeekUpdates(c, ws);
-  var draft={ campaign:c.name, csa:c.csa||'', weekStart:ws, weekEnd:we, overall:'', trend:'na',
-    daysReviewed:ups.length, wins:'', blockers:'', drivers:'', tasks:'', changes:'', nextFocus:'', state:'draft' };
+// --- month math (calendar month) ---
+function cragMonthStart(s){ var d=cragDateObj(s)||cragDateObj(cragToday()); return cragYmd(new Date(d.getFullYear(), d.getMonth(), 1)); }
+function cragMonthEnd(s){ var d=cragDateObj(s)||cragDateObj(cragToday()); return cragYmd(new Date(d.getFullYear(), d.getMonth()+1, 0)); }
+function cragMonthLabel(s){ var d=cragDateObj(s)||cragDateObj(cragToday()); var mo=['January','February','March','April','May','June','July','August','September','October','November','December']; return mo[d.getMonth()]+' '+d.getFullYear(); }
+function cragRangeUpdates(c, start, end){
+  return (c.updates||[]).filter(function(u){ var d=cragNormDate(u.date); return d && d>=start && d<=end; })
+    .slice().sort(function(a,b){ return cragNormDate(a.date)<cragNormDate(b.date)?-1:1; }); }
+// --- the deterministic draft engine (works over any date range; pw = 'week' | 'month') ---
+function cragBuildRange(c, start, end, pw){
+  pw=pw||'week'; var ups=cragRangeUpdates(c, start, end);
+  var draft={ overall:'', trend:'na', daysReviewed:ups.length, wins:'', blockers:'', drivers:'', tasks:'', changes:'', nextFocus:'' };
   if(!ups.length){
-    draft.wins='No daily reviews were logged this week, so there is nothing to summarize yet.';
+    draft.wins='No daily reviews were logged this '+pw+', so there is nothing to summarize yet.';
     draft.blockers='n/a'; draft.drivers='n/a'; draft.tasks='n/a'; draft.changes='n/a';
-    draft.nextFocus='Log the daily review for this client so next week has data to summarize.';
+    draft.nextFocus='Log the daily review for this client so the next '+pw+' has data to summarize.';
     return draft;
   }
   var CATS=CRAG_CATS;
@@ -2585,7 +2621,7 @@ function cragBuildWeekly(c, ws){
   draft.overall=lOv||'';
   if(ups.length===1) draft.trend='flat';
   else { var rf=cragRank(fOv), rl=cragRank(lOv); draft.trend=(rl<rf)?'up':((rl>rf)?'down':'flat'); }
-  // wins: green on last day + any recovery across the week
+  // wins: green on last day + any recovery across the period
   var wins=[];
   CATS.forEach(function(cat){ if(last[cat.key]==='G') wins.push(cat.short+' is Green'); });
   CATS.forEach(function(cat){ var seq=cragCatSeq(ups,cat.key); var e=seq[0].code, l=seq[seq.length-1].code;
@@ -2598,13 +2634,13 @@ function cragBuildWeekly(c, ws){
     var notes=flagged.filter(function(x){return x.note;}).map(function(x){ return cragFmtDate(x.date)+': '+x.note; });
     var recur=flagged.length>=2?(' (recurring '+flagged.length+'×)'):'';
     blk.push(cat.short+recur+': '+(notes.length?notes.join(' | '):('flagged '+flagged.map(function(x){return cragFmtDate(x.date);}).join(', ')+', no note left'))); });
-  draft.blockers = blk.length ? ('• '+blk.join('\n• ')) : 'No Amber or Red flags this week.';
+  draft.blockers = blk.length ? ('• '+blk.join('\n• ')) : 'No Amber or Red flags this '+pw+'.';
   // drivers: which category held the worst rating on A/R days
   var driveCount={};
   ups.forEach(function(u){ var ov=cragUpdOverall(u); if(ov==='A'||ov==='R'){ var worst=Math.max(cragRank(u.tc),cragRank(u.tq),cragRank(u.cm));
     CATS.forEach(function(cat){ if(cragRank(u[cat.key])===worst) driveCount[cat.short]=(driveCount[cat.short]||0)+1; }); } });
   var drivers=Object.keys(driveCount).sort(function(a,b){ return driveCount[b]-driveCount[a]; });
-  draft.drivers = drivers.length ? ('• '+drivers.map(function(k){ return k+' drove the status on '+driveCount[k]+' day'+(driveCount[k]>1?'s':''); }).join('\n• ')) : 'Status stayed Green all week; no category dragged it down.';
+  draft.drivers = drivers.length ? ('• '+drivers.map(function(k){ return k+' drove the status on '+driveCount[k]+' day'+(driveCount[k]>1?'s':''); }).join('\n• ')) : 'Status stayed Green all '+pw+'; no category dragged it down.';
   // tasks: best-effort from the ending state + notes
   var done=[], carried=[];
   CATS.forEach(function(cat){ if(last[cat.key]==='G') done.push(cat.short+' on track'); });
@@ -2612,20 +2648,25 @@ function cragBuildWeekly(c, ws){
   var tparts=[];
   if(done.length) tparts.push('On track / completed:\n• '+done.join('\n• '));
   if(carried.length) tparts.push('Carried forward / at risk:\n• '+carried.join('\n• '));
-  draft.tasks = tparts.length ? tparts.join('\n') : 'No specific tasks captured in the notes this week. Edit to add completed, delayed, or carried-over items.';
+  draft.tasks = tparts.length ? tparts.join('\n') : 'No specific tasks captured in the notes this '+pw+'. Edit to add completed, delayed, or carried-over items.';
   // status changes: overall transitions day to day
   var chg=[]; var prev=null, prevDate=null;
   ups.forEach(function(u){ var ov=cragUpdOverall(u); var d=cragFmtDate(cragNormDate(u.date));
     if(prev===null){ prev=ov; prevDate=d; return; }
-    if(ov!==prev){ chg.push(prevDate+' '+cragWordFull(prev)+' → '+d+' '+cragWordFull(ov)); prev=ov; prevDate=d; } });
+    if(ov!==prev){ chg.push(prevDate+' '+cragWordFull(prev)+' > '+d+' '+cragWordFull(ov)); prev=ov; prevDate=d; } });
   draft.changes = chg.length ? ('• '+chg.join('\n• ')) : ('Held at '+cragWordFull(lOv)+' across all '+ups.length+' logged day'+(ups.length>1?'s':'')+'.');
   // recommended focus: ending A/R categories + the top driver
   var foc=[];
   CATS.forEach(function(cat){ if(last[cat.key]==='A'||last[cat.key]==='R'){ var n=last[cat.key+'Note']; foc.push('Address '+cat.short+(n?(' ('+n+')'):'')); } });
-  if(drivers.length && foc.join(' ').indexOf(drivers[0])<0) foc.push('Watch '+drivers[0]+', the main driver this week');
+  if(drivers.length && foc.join(' ').indexOf(drivers[0])<0) foc.push('Watch '+drivers[0]+', the main driver this '+pw+'');
   if(!foc.length) foc.push('Maintain the current cadence. Keep comms proactive and keep logging the daily review.');
   draft.nextFocus='• '+foc.join('\n• ');
   return draft;
+}
+function cragBuildWeekly(c, ws){ var we=cragWeekEnd(ws);
+  var r=cragBuildRange(c, ws, we, 'week');
+  r.campaign=c.name; r.csa=c.csa||''; r.weekStart=ws; r.weekEnd=we; r.state='draft';
+  return r;
 }
 // --- persistence (sheet + localStorage cache) ---
 function cragWeeklyKey(campaign, ws){ return String(campaign||'').trim()+'||'+cragNormDate(ws); }
@@ -2712,10 +2753,78 @@ function cragExport(){
     document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },100);
   }catch(e){ alert('Export failed.'); }
 }
+// ---------- PDF report export (weekly / monthly) ----------
+// Builds a print-styled standalone report and opens the browser print dialog, where the
+// CSA picks "Save as PDF". No external libraries; works offline. Reads daily entries only.
+function cragReportHtml(scope){
+  var isMonth=(scope==='month');
+  var start=isMonth?cragMonthStart(cragToday()):cragWeekStart(cragToday());
+  var end=isMonth?cragMonthEnd(cragToday()):cragWeekEnd(start);
+  var periodLabel=isMonth?cragMonthLabel(cragToday()):(cragFmtDate(start)+' to '+cragFmtDate(end)+', '+start.slice(0,4));
+  var pw=isMonth?'month':'week', title=isMonth?'Monthly':'Weekly';
+  var camps=cragModel.campaigns||[];
+  var rows=camps.map(function(c){ var saved=(!isMonth)?cragWeeklySaved(c.name,start):null; return { c:c, s:saved?saved:cragBuildRange(c,start,end,pw), saved:!!saved }; });
+  var counts={G:0,A:0,R:0,NC:0};
+  rows.forEach(function(r){ var o=r.s.overall; counts[(o==='G'||o==='A'||o==='R')?o:'NC']++; });
+  function ovr(o){ return o==='G'?'Healthy':o==='A'?'Needs Attention':o==='R'?'At Risk':'Not reviewed'; }
+  function cls(o){ return o==='G'?'g':o==='A'?'a':o==='R'?'r':'nc'; }
+  function trend(t){ return ({up:'Improved',down:'Declined',flat:'Stable'})[t]||'n/a'; }
+  function th(t){ return esc(t==null?'':String(t)).replace(/\n/g,'<br>'); }
+  var summaryRows=rows.map(function(r){ return '<tr><td class="cli">'+esc(r.c.name)+'</td><td>'+esc(r.c.csa||'Unassigned')+'</td><td class="num">'+r.s.daysReviewed+'</td><td><span class="pill '+cls(r.s.overall)+'">'+ovr(r.s.overall)+'</span></td><td>'+trend(r.s.trend)+'</td></tr>'; }).join('');
+  var detail=rows.filter(function(r){ return r.s.daysReviewed>0; }).map(function(r){
+    return '<div class="det"><div class="detH"><span class="detName">'+esc(r.c.name)+'</span><span class="detCsa">'+esc(r.c.csa||'Unassigned')+'</span>'
+      +'<span class="pill '+cls(r.s.overall)+'">'+ovr(r.s.overall)+'</span><span class="tr">Trend: '+trend(r.s.trend)+'</span><span class="tr">Reviewed '+r.s.daysReviewed+(isMonth?'':' of 7')+' days</span>'+(r.saved?'<span class="fin">Finalized</span>':'')+'</div>'
+      +'<div class="sec"><h4>Key progress &amp; wins</h4><p>'+th(r.s.wins)+'</p></div>'
+      +'<div class="sec"><h4>Recurring blockers, issues &amp; risks</h4><p>'+th(r.s.blockers)+'</p></div>'
+      +'<div class="sec"><h4>Main drivers behind the RAG status</h4><p>'+th(r.s.drivers)+'</p></div>'
+      +'<div class="sec"><h4>Tasks completed / delayed / carried forward</h4><p>'+th(r.s.tasks)+'</p></div>'
+      +'<div class="sec"><h4>Status changes through the '+pw+'</h4><p>'+th(r.s.changes)+'</p></div>'
+      +'<div class="sec"><h4>Recommended focus next '+pw+'</h4><p>'+th(r.s.nextFocus)+'</p></div>'
+      +'</div>';
+  }).join('');
+  var noData=rows.filter(function(r){ return r.s.daysReviewed===0; }).map(function(r){ return esc(r.c.name); });
+  var gen=cragFmtDate(cragToday())+', '+cragToday().slice(0,4);
+  return '<!doctype html><html><head><meta charset="utf-8"><title>Client Health RAG Report - '+esc(periodLabel)+'</title><style>'
+    + '*{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:28px;background:#fff}'
+    + 'h1{font-size:22px;margin:0 0 4px} h2{font-size:16px;margin:0 0 10px} .sub{color:#475569;font-size:13px;margin:0 0 2px} .gen{color:#94a3b8;font-size:11px;margin:0 0 18px}'
+    + '.cards{display:flex;gap:10px;margin:0 0 18px;flex-wrap:wrap} .card{border:1px solid #e2e8f0;border-radius:8px;padding:8px 14px;min-width:120px} .card b{display:block;font-size:20px} .card span{font-size:11px;color:#64748b}'
+    + 'table{width:100%;border-collapse:collapse;margin:0 0 22px;font-size:12.5px} th{text-align:left;background:#f1f5f9;border-bottom:2px solid #e2e8f0;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#475569} td{border-bottom:1px solid #eef2f7;padding:8px 10px} td.cli{font-weight:700} td.num{text-align:center}'
+    + '.pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:11px;border:1px solid} .pill.g{color:#047857;background:#ecfdf5;border-color:#a7f3d0} .pill.a{color:#b45309;background:#fffbeb;border-color:#fde68a} .pill.r{color:#b91c1c;background:#fef2f2;border-color:#fecaca} .pill.nc{color:#475569;background:#f1f5f9;border-color:#e2e8f0}'
+    + '.det{border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin:0 0 14px;page-break-inside:avoid} .detH{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;border-bottom:1px solid #eef2f7;padding-bottom:8px} .detName{font-weight:800;font-size:15px} .detCsa{color:#64748b;font-size:12px} .tr{font-size:11px;color:#475569} .fin{font-size:11px;color:#047857;font-weight:700}'
+    + '.sec{margin:8px 0} .sec h4{margin:0 0 3px;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#334155} .sec p{margin:0;font-size:12.5px;line-height:1.55}'
+    + '.foot{color:#94a3b8;font-size:11px;margin-top:12px} @media print{body{padding:0} .det{border-color:#ddd}}'
+    + '</style></head><body>'
+    + '<h1>Client Health RAG Report</h1>'
+    + '<p class="sub"><b>'+esc(title)+' report</b> &middot; '+esc(periodLabel)+' &middot; '+camps.length+' clients</p>'
+    + '<p class="gen">Generated '+esc(gen)+'. Source: daily RAG entries. This report does not change any entry.</p>'
+    + '<div class="cards">'
+      + '<div class="card"><b>'+counts.G+'</b><span>Healthy</span></div>'
+      + '<div class="card"><b>'+counts.A+'</b><span>Needs Attention</span></div>'
+      + '<div class="card"><b>'+counts.R+'</b><span>At Risk</span></div>'
+      + '<div class="card"><b>'+counts.NC+'</b><span>Not reviewed</span></div>'
+    + '</div>'
+    + '<table><thead><tr><th>Client</th><th>Assigned CSA</th><th>Days</th><th>Overall ('+pw+')</th><th>Trend</th></tr></thead><tbody>'+summaryRows+'</tbody></table>'
+    + (detail?('<h2>Per-client detail</h2>'+detail):'')
+    + (noData.length?('<p class="foot">No reviews logged this '+pw+' for: '+noData.join(', ')+'.</p>'):'')
+    + '</body></html>';
+}
+function cragPrintHtml(html){
+  try{
+    var f=document.createElement('iframe');
+    f.style.position='fixed'; f.style.right='0'; f.style.bottom='0'; f.style.width='0'; f.style.height='0'; f.style.border='0';
+    document.body.appendChild(f);
+    var d=f.contentWindow.document; d.open(); d.write(html); d.close();
+    setTimeout(function(){ try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){} setTimeout(function(){ try{ f.remove(); }catch(e){} }, 1500); }, 450);
+  }catch(e){ alert('Could not open the print dialog. Try again, or use a desktop browser.'); }
+}
+function cragExportReport(scope){ cragPrintHtml(cragReportHtml(scope)); }
 function wireCampaignRag(){
   cragInjectCss(); cragCacheLoad(); cragWeeklyCacheLoad(); cragRenderAll();
   var rf=$('#cragRefresh'); if(rf) rf.onclick=cragSync;
-  var ex=$('#cragExport'); if(ex) ex.onclick=cragExport;
+  var eb=$('#cragExportBtn'), em=$('#cragExportMenu');
+  if(eb&&em){ eb.onclick=function(e){ e.stopPropagation(); em.classList.toggle('open'); };
+    em.querySelectorAll('.cragMenuItem').forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); em.classList.remove('open'); var k=b.getAttribute('data-exp'); if(k==='json') cragExport(); else cragExportReport(k); }; });
+    document.addEventListener('click', function(){ em.classList.remove('open'); }); }
   var q=$('#cragQ'); if(q){ q.value=cragState.q; q.oninput=function(){ cragState.q=this.value; cragRenderTable(); }; }
   cragSync();
 }
