@@ -1359,19 +1359,6 @@ function cragPdfFilename(scope){
   var lbl=isMonth?cragMonthLabel(cragToday()):(cragFmtDate(start)+' to '+cragFmtDate(cragWeekEnd(start))+' '+start.slice(0,4));
   return ('Campaign RAG Summary Report - '+lbl+'.pdf').replace(/[\\/:*?"<>|]/g,'-');
 }
-// lazy-load the html2pdf bundle only when the user actually exports; offline-safe (falls back to print)
-function cragLoadHtml2pdf(){
-  if(window.html2pdf) return Promise.resolve(window.html2pdf);
-  if(cragLoadHtml2pdf._p) return cragLoadHtml2pdf._p;
-  cragLoadHtml2pdf._p=new Promise(function(res,rej){
-    var s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.3/html2pdf.bundle.min.js';
-    s.onload=function(){ window.html2pdf?res(window.html2pdf):rej(new Error('html2pdf missing')); };
-    s.onerror=function(){ cragLoadHtml2pdf._p=null; rej(new Error('html2pdf load failed')); };
-    document.head.appendChild(s);
-  });
-  return cragLoadHtml2pdf._p;
-}
 // fallback: open the standalone report in a new tab and trigger the print dialog (Save as PDF)
 function cragPrintFallback(html){
   var w=null; try{ w=window.open('', '_blank'); }catch(e){}
@@ -1379,31 +1366,42 @@ function cragPrintFallback(html){
     w.document.open(); w.document.write(doc); w.document.close(); return true; }
   cragPrintHtml(html); return false;
 }
-// primary export: render the report offscreen in an isolated iframe (no style bleed into the
-// hub) and download it as a real .pdf in one click; falls back to print on any failure
+// primary export: render the report in an isolated offscreen iframe and run the PDF library
+// INSIDE that iframe, so the report's own light, full-width styling applies (the hub's dark
+// theme + narrow layout must NOT bleed in). Downloads a real .pdf in one click; if the library
+// cannot load (offline/CDN blocked) it falls back to opening a print-ready tab (Save as PDF).
 function cragExportReport(scope){
   var html=cragReportHtml(scope);
   var eb=$('#cragExportBtn'); var lbl0=eb?eb.textContent:''; if(eb){ eb.textContent='Preparing PDF…'; }
   var f=document.createElement('iframe');
   f.setAttribute('aria-hidden','true');
-  f.style.cssText='position:fixed;left:-10000px;top:0;width:820px;height:1160px;border:0;';
+  f.style.cssText='position:fixed;left:-10000px;top:0;width:820px;height:1160px;border:0;background:#fff;';
   document.body.appendChild(f);
-  var d=f.contentWindow.document; d.open(); d.write(html); d.close();
+  var win=f.contentWindow, d=win.document;
+  var doc=html.replace('</head>','<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.3/html2pdf.bundle.min.js"><\/script></head>');
+  d.open(); d.write(doc); d.close();
   var settled=false;
-  var restore=function(){ if(eb&&lbl0) eb.textContent=lbl0; };
-  var cleanup=function(){ if(settled) return; settled=true; restore(); setTimeout(function(){ try{ f.remove(); }catch(e){} }, 600); };
-  cragLoadHtml2pdf().then(function(h2p){
-    return new Promise(function(res){ setTimeout(res, 350); }).then(function(){
-      return h2p().set({
-        margin:[10,10,14,10],
-        filename:cragPdfFilename(scope),
-        image:{type:'jpeg',quality:0.98},
-        html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:820},
-        jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-        pagebreak:{mode:['css','avoid-all']}
-      }).from(f.contentWindow.document.body).save();
-    });
-  }).then(cleanup).catch(function(){ cleanup(); cragPrintFallback(html); });
+  var finish=function(useFallback){ if(settled) return; settled=true; if(eb&&lbl0) eb.textContent=lbl0;
+    if(useFallback) cragPrintFallback(html);
+    setTimeout(function(){ try{ f.remove(); }catch(e){} }, 800); };
+  var t0=Date.now();
+  (function run(){
+    if(win.html2pdf){
+      try{
+        win.html2pdf().set({
+          margin:10,
+          filename:cragPdfFilename(scope),
+          image:{type:'jpeg',quality:0.98},
+          html2canvas:{scale:2,backgroundColor:'#ffffff',useCORS:true,windowWidth:820},
+          jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+          pagebreak:{mode:['css','avoid-all']}
+        }).from(d.body).save().then(function(){ finish(false); }, function(){ finish(true); });
+      }catch(e){ finish(true); }
+      return;
+    }
+    if(Date.now()-t0>9000){ finish(true); return; }
+    setTimeout(run, 150);
+  })();
 }
 function wireCampaignRag(){
   cragInjectCss(); cragCacheLoad(); cragWeeklyCacheLoad(); cragRenderAll();
