@@ -1230,60 +1230,108 @@ function cragReportHtml(scope){
   var counts={G:0,A:0,R:0,NC:0};
   rows.forEach(function(r){ var o=r.s.overall; counts[(o==='G'||o==='A'||o==='R')?o:'NC']++; });
   var reviewed=rows.filter(function(r){ return r.s.daysReviewed>0; });
-  // one-line "why" for a campaign, from the latest Amber/Red notes in the period
-  function reasonFor(r){ var ups=r.ups; if(!ups.length) return ''; var last=ups[ups.length-1]; var parts=[];
-    CRAG_CATS.forEach(function(cat){ if(last[cat.key]==='A'||last[cat.key]==='R'){ var n=last[cat.key+'Note']; parts.push(cat.short+(n?': '+n:'')); } });
-    return parts.join('; '); }
-  // changes vs the previous period (only for campaigns reviewed in both)
-  var improved=[], declined=[];
-  rows.forEach(function(r){ if(r.s.daysReviewed===0 || !r.prevOv) return;
-    var rc=cragRank(r.s.overall), rp=cragRank(r.prevOv);
-    if(rc<rp) improved.push(esc(r.c.name)+' ('+ovr(r.prevOv)+' to '+ovr(r.s.overall)+')');
-    else if(rc>rp) declined.push(esc(r.c.name)+' ('+ovr(r.prevOv)+' to '+ovr(r.s.overall)+')'); });
-  // recurring blockers across the period (a category flagged Amber/Red 2+ times)
-  var recurring=[];
-  rows.forEach(function(r){ CRAG_CATS.forEach(function(cat){
-    var seq=cragCatSeq(r.ups,cat.key).filter(function(x){ return x.code==='A'||x.code==='R'; });
-    if(seq.length>=2) recurring.push(esc(r.c.name)+': '+cat.short+' flagged '+seq.length+' times'); }); });
-  // executive summary blocks
-  function whoLine(r){ var why=reasonFor(r); return '<li><b>'+esc(r.c.name)+'</b> ('+esc(r.c.csa||'Unassigned')+')'+(why?' - '+esc(why):'')+'</li>'; }
-  var attentionList=reviewed.filter(function(r){ return r.s.overall==='A'; }).map(whoLine);
-  var riskList=reviewed.filter(function(r){ return r.s.overall==='R'; }).map(whoLine);
-  var highlights=[];
-  improved.forEach(function(x){ highlights.push('<li>Improved: '+x+'</li>'); });
-  reviewed.filter(function(r){ return r.s.overall==='G'; }).forEach(function(r){ highlights.push('<li><b>'+esc(r.c.name)+'</b> is Healthy this '+pw+'</li>'); });
-  var changeItems=[];
-  improved.forEach(function(x){ changeItems.push('<li>Improved: '+x+'</li>'); });
-  declined.forEach(function(x){ changeItems.push('<li>Declined: '+x+'</li>'); });
-  var notReviewed=rows.filter(function(r){ return r.s.daysReviewed===0; });
-  var mgmt=[];
-  if(counts.R) mgmt.push('<li>'+counts.R+' campaign'+(counts.R>1?'s':'')+' At Risk - see risks above</li>');
-  if(declined.length) mgmt.push('<li>'+declined.length+' campaign'+(declined.length>1?'s':'')+' declined vs the previous '+pw+'</li>');
-  if(recurring.length) mgmt.push('<li>'+recurring.length+' recurring blocker'+(recurring.length>1?'s':'')+' - see RAG Trends below</li>');
-  if(notReviewed.length) mgmt.push('<li>'+notReviewed.length+' campaign'+(notReviewed.length>1?'s':'')+' not reviewed this '+pw+': '+notReviewed.map(function(r){ return esc(r.c.name); }).join(', ')+'</li>');
-  if(!mgmt.length) mgmt.push('<li>Nothing flagged for management this '+pw+'.</li>');
   function block(titleTxt, items, emptyTxt){
     if(!items.length) return emptyTxt?('<div class="xblk"><h3>'+titleTxt+'</h3><p class="muted">'+emptyTxt+'</p></div>'):'';
     return '<div class="xblk"><h3>'+titleTxt+'</h3><ul>'+items.join('')+'</ul></div>';
   }
   var healthLine=counts.G+' Healthy, '+counts.A+' Needs Attention, '+counts.R+' At Risk'+(counts.NC?(', '+counts.NC+' not reviewed'):'')+' across '+camps.length+' campaign'+(camps.length===1?'':'s')+'.';
-  var changesBlock=(rows.some(function(r){return !!r.prevOv;}))
-    ? block('Important changes since the previous '+pw+' ('+esc(prev.label)+')', changeItems, 'No RAG status changed vs the previous '+pw+'.')
-    : '';
-  // campaign overview: one executive card per client (current + previous RAG, recurring, nuances)
+  // ---- analytics helpers (all derived from the daily entries already captured) ----
+  function catFlags(ups,key){ return cragCatSeq(ups,key).filter(function(x){ return x.code==='A'||x.code==='R'; }); }
+  function catMove(ups,key){ var seq=cragCatSeq(ups,key).filter(function(x){ return x.code==='G'||x.code==='A'||x.code==='R'; });
+    if(seq.length<2) return 0; var e=cragRank(seq[0].code), l=cragRank(seq[seq.length-1].code); return (l<e)?-1:((l>e)?1:0); }
+  function mainIssue(r){ if(r.s.daysReviewed===0||r.s.overall==='G') return ''; var best='',bestN=0;
+    CRAG_CATS.forEach(function(cat){ var n=catFlags(r.ups,cat.key).length; if(n>bestN){ bestN=n; best=cat.short; } }); return best; }
+  // Trend is week over week when a prior week exists; Mixed when one area recovered while
+  // another keeps recurring; Insufficient when there is no basis to compare yet. A campaign
+  // is NOT called "declining" just for being Amber; it must be getting worse over time.
+  function trendInfo(r){
+    var recovered=[], worsened=[], recurring=[];
+    CRAG_CATS.forEach(function(cat){ var m=catMove(r.ups,cat.key); if(m<0) recovered.push(cat.short); else if(m>0) worsened.push(cat.short);
+      if(catFlags(r.ups,cat.key).length>=2) recurring.push(cat.short); });
+    var mixed=recovered.length>0 && (recurring.length>0||worsened.length>0);
+    var dir;
+    if(r.s.daysReviewed===0) dir='insuff';
+    else if(r.prevOv){ var rc=cragRank(r.s.overall), rp=cragRank(r.prevOv); dir=(rc<rp)?'up':((rc>rp)?'down':'flat'); if(mixed) dir='mixed'; }
+    else dir=mixed?'mixed':'insuff';
+    var M={ up:{l:'Improving',e:'🟢',c:'tg'}, down:{l:'Declining',e:'🟠',c:'ta'}, flat:{l:'Stable',e:'➡️',c:'tf'}, mixed:{l:'Mixed',e:'🟡',c:'tm'}, insuff:{l:'Insufficient Data',e:'⚪',c:'tn'} };
+    var note = mixed ? ((recovered[0]||'One area')+' recovered, but '+(recurring[0]||worsened[0])+' continues to recur.') : '';
+    return { dir:dir, label:M[dir].l, chip:'<span class="tchip '+M[dir].c+'">'+M[dir].e+' '+M[dir].l+'</span>', note:note };
+  }
+  rows.forEach(function(r){ r.ti=trendInfo(r); r.issue=mainIssue(r); });
+  // wins highlights (surfaced in the movement section)
+  var highlights=[];
+  reviewed.forEach(function(r){ if(r.s.overall==='G') highlights.push('<li><b>'+esc(r.c.name)+'</b> is Healthy this '+pw+'</li>');
+    CRAG_CATS.forEach(function(cat){ if(catMove(r.ups,cat.key)<0) highlights.push('<li>'+esc(r.c.name)+': '+cat.short+' recovered</li>'); }); });
+  var notReviewed=rows.filter(function(r){ return r.s.daysReviewed===0; });
+  // ---- #6 review coverage ----
+  var total=camps.length, revN=reviewed.length, covPct=total?Math.round(revN/total*100):0;
+  var covHtml='<p class="cov"><b>'+revN+' / '+total+'</b> campaigns reviewed &middot; '+covPct+'% coverage</p>';
+  if(revN<total){ var miss=total-revN; covHtml+='<div class="warn">Health assessment is incomplete. '+miss+' campaign'+(miss>1?'s have':' has')+' no daily RAG review logged this '+pw+'.</div>'; }
+  // coverage over time, bucketed by ISO week from the full history
+  var weekMap={};
+  camps.forEach(function(c){ (c.updates||[]).forEach(function(u){ var d=cragNormDate(u.date); if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return; var ws=cragWeekStart(d); (weekMap[ws]=weekMap[ws]||{})[c.id||c.name]=1; }); });
+  var wkeys=Object.keys(weekMap); var curWs=cragWeekStart(cragToday()); if(wkeys.indexOf(curWs)<0){ weekMap[curWs]=weekMap[curWs]||{}; wkeys.push(curWs); }
+  wkeys.sort(); var covTrend=wkeys.slice(-6).map(function(ws){ var n=Object.keys(weekMap[ws]||{}).length; return { ws:ws, n:n, pct: total?Math.round(n/total*100):0 }; });
+  // ---- #8 management attention (each campaign lands in its single highest tier) ----
+  var immediate=[], watch=[], follow=[], placed={};
+  function mpush(arr,name,reason){ if(placed[name]) return; placed[name]=1; arr.push('<li><b>'+esc(name)+'</b> - '+esc(reason)+'</li>'); }
+  rows.forEach(function(r){ var nm=r.c.name, maxN=0, maxC='';
+    CRAG_CATS.forEach(function(cat){ var n=catFlags(r.ups,cat.key).length; if(n>maxN){ maxN=n; maxC=cat.short; } });
+    var commsDays=catFlags(r.ups,'cm').length;
+    if(r.s.overall==='R'){ mpush(immediate,nm,'At Risk this '+pw); return; }
+    if(maxN>=3){ mpush(immediate,nm,maxC+' flagged '+maxN+' times this '+pw); return; }
+    if(maxN===2){ mpush(watch,nm,maxC+' flagged twice this '+pw); return; }
+    if(r.s.overall==='A' && r.ti.dir==='down'){ mpush(watch,nm,'Needs Attention and declining'); return; }
+    if(commsDays>=2){ mpush(watch,nm,'Communication flagged on '+commsDays+' days'); return; }
+    if(r.s.daysReviewed===0){ mpush(follow,nm,'No daily review logged this '+pw); return; }
+    if(!r.prevOv){ mpush(follow,nm,'New or limited history, no prior '+pw+' to compare'); return; }
+  });
+  function tierBlock(cls,label,items){ return '<div class="mtier '+cls+'"><h3>'+label+'</h3>'+(items.length?('<ul>'+items.join('')+'</ul>'):'<p class="none">None this '+pw+'.</p>')+'</div>'; }
+  var mgmtHtml='<h2>Management Attention</h2>'+tierBlock('mt-i','Immediate',immediate)+tierBlock('mt-w','Watch',watch)+tierBlock('mt-f','Follow Up',follow);
+  // ---- #1 / #2 portfolio at a glance (health and trend shown separately) ----
+  var sevDir={down:0,mixed:1,flat:2,up:3,insuff:4};
+  var glance=rows.slice().sort(function(a,b){ return (cragRank(b.s.overall)-cragRank(a.s.overall)) || (sevDir[a.ti.dir]-sevDir[b.ti.dir]) || (a.c.name<b.c.name?-1:1); });
+  var glanceRows=glance.map(function(r){ return '<tr><td>'+esc(r.c.name)+'</td><td>'+pill(r.s.overall)+'</td><td>'+r.ti.chip+'</td><td>'+(r.issue?esc(r.issue):'n/a')+'</td></tr>'; }).join('');
+  var glanceHtml='<h2>Portfolio at a Glance</h2><table class="gtab"><thead><tr><th>Campaign</th><th>Health</th><th>Trend</th><th>Main Issue</th></tr></thead><tbody>'+glanceRows+'</tbody></table>';
+  // ---- #7 weekly movement (week over week) ----
+  var mv={improved:0,stable:0,declined:0,newRisk:0,insuff:0}, mvUp=[], mvDown=[];
+  rows.forEach(function(r){ if(r.s.daysReviewed===0 || !r.prevOv){ mv.insuff++; return; }
+    var rc=cragRank(r.s.overall), rp=cragRank(r.prevOv);
+    if(rc<rp){ mv.improved++; mvUp.push('<li>'+esc(r.c.name)+': '+ovr(r.prevOv)+' &rarr; '+ovr(r.s.overall)+'</li>'); }
+    else if(rc>rp){ mv.declined++; if(r.s.overall==='R'&&r.prevOv!=='R') mv.newRisk++; mvDown.push('<li>'+esc(r.c.name)+': '+ovr(r.prevOv)+' &rarr; '+ovr(r.s.overall)+'</li>'); }
+    else mv.stable++; });
+  function mvc(n,l){ return '<div class="mvc"><b>'+n+'</b><span>'+l+'</span></div>'; }
+  var mvHtml='<h2>Weekly Movement</h2><div class="mvgrid">'+mvc(mv.improved,'Improved')+mvc(mv.stable,'Stable')+mvc(mv.declined,'Declined')+mvc(mv.newRisk,'Newly At Risk')+mvc(mv.insuff,'Insufficient Data')+'</div>'
+    + (mvUp.length?('<div class="xblk"><h3>Improving</h3><ul>'+mvUp.join('')+'</ul></div>'):'')
+    + (mvDown.length?('<div class="xblk"><h3>Declining</h3><ul>'+mvDown.join('')+'</ul></div>'):'')
+    + ((!mvUp.length&&!mvDown.length)?('<p class="muted">No week over week movement yet. This needs a second week of reviews to compare against '+esc(prev.label)+'.</p>'):'')
+    + block('Wins this '+pw, highlights, '');
+  // ---- #3 recurring issues, aggregated by category ----
+  var aggByCat={}, perLine=[];
+  rows.forEach(function(r){ CRAG_CATS.forEach(function(cat){ var n=catFlags(r.ups,cat.key).length; if(n>=2){
+    aggByCat[cat.short]=aggByCat[cat.short]||{occ:0,camps:{}}; aggByCat[cat.short].occ+=n; aggByCat[cat.short].camps[r.c.name]=1;
+    perLine.push('<li>'+esc(r.c.name)+': '+cat.short+' &times;'+n+'</li>'); } }); });
+  var aggRows=Object.keys(aggByCat).map(function(k){ return { cat:k, occ:aggByCat[k].occ, camps:Object.keys(aggByCat[k].camps).length }; })
+    .sort(function(a,b){ return (b.camps-a.camps)||(b.occ-a.occ); });
+  var recurHtml='<h2>Recurring Issues This '+(isMonth?'Month':'Week')+'</h2>';
+  if(aggRows.length){ recurHtml+='<table class="aggt"><thead><tr><th>Category</th><th>Occurrences</th><th>Campaigns</th></tr></thead><tbody>'
+      + aggRows.map(function(a){ return '<tr><td>'+esc(a.cat)+'</td><td class="n">'+a.occ+'</td><td class="n">'+a.camps+'</td></tr>'; }).join('') + '</tbody></table>'
+      + '<p class="pat">Pattern: '+esc(aggRows[0].cat)+' is the most widespread recurring issue this '+pw+'.</p>'
+      + '<div class="xblk"><h3>By campaign</h3><ul>'+perLine.join('')+'</ul></div>';
+  } else { recurHtml+='<p class="muted">No category was flagged twice or more this '+pw+'.</p>'; }
+  // ---- campaign overview cards (health + trend split, plus the mixed nuance line) ----
   var overview=rows.map(function(r){
     var reviewedThis=r.s.daysReviewed>0;
     var accent=cls(r.s.overall);
     var rec=[];
-    CRAG_CATS.forEach(function(cat){ var seq=cragCatSeq(r.ups,cat.key).filter(function(x){ return x.code==='A'||x.code==='R'; }); if(seq.length>=2) rec.push(cat.short+' ('+seq.length+'x)'); });
-    var statusLine=reviewedThis
-      ? ('Reviewed '+r.s.daysReviewed+(isMonth?'':' of 7')+' day'+(r.s.daysReviewed>1?'s':'')+' &middot; '+trend(r.s.trend))
-      : 'Not reviewed this '+pw;
+    CRAG_CATS.forEach(function(cat){ var seq=catFlags(r.ups,cat.key); if(seq.length>=2) rec.push(cat.short+' ('+seq.length+'x)'); });
+    var statusLine=reviewedThis ? ('Reviewed '+r.s.daysReviewed+(isMonth?'':' of 7')+' day'+(r.s.daysReviewed>1?'s':'')) : 'Not reviewed this '+pw;
     var prevBit=r.prevOv?('was '+pill(r.prevOv)):'no prior '+pw;
     return '<div class="ccard '+accent+'">'
-      +'<div class="cch"><span class="ccn">'+esc(r.c.name)+'</span>'+pill(r.s.overall)+'</div>'
+      +'<div class="cch"><span class="ccn">'+esc(r.c.name)+'</span><span class="chead">'+pill(r.s.overall)+' '+r.ti.chip+'</span></div>'
       +'<div class="ccmeta"><span class="ccsa">'+esc(r.c.csa||'Unassigned')+'</span> &middot; Previous: '+prevBit+(r.saved?' &middot; Finalized':'')+'</div>'
       +'<div class="ccstat">'+statusLine+'</div>'
+      +(r.ti.note?('<div class="ccmix">'+esc(r.ti.note)+'</div>'):'')
       +(reviewedThis?(''
         +'<div class="ccsec"><h4>Key progress &amp; wins</h4><p>'+th(r.s.wins)+'</p></div>'
         +'<div class="ccsec"><h4>Current blocker / risk</h4><p>'+th(r.s.blockers)+'</p></div>'
@@ -1292,23 +1340,16 @@ function cragReportHtml(scope){
       ):'<div class="ccsec"><p class="muted">No daily review was logged this '+pw+', so there is no summary to show.</p></div>')
       +'</div>';
   }).join('');
-  // RAG trends (only shown when there is history: a previous period or multi-day entries)
+  // ---- RAG trends: overall direction, status changes, coverage over time ----
   var anyPrev=rows.some(function(r){ return !!r.prevOv; });
-  var anyMulti=rows.some(function(r){ return r.s.daysReviewed>=2; });
-  var showTrends=anyPrev||anyMulti;
-  var trendsHtml='';
-  if(showTrends){
-    var overallTrend='';
-    if(anyPrev){ var prevRA=0; rows.forEach(function(r){ if(r.prevOv==='A'||r.prevOv==='R') prevRA++; });
-      var nowRA=counts.A+counts.R; var word=(nowRA<prevRA)?'improving':((nowRA>prevRA)?'declining':'holding steady');
-      overallTrend='<p class="muted">Overall health is '+word+': '+nowRA+' campaign'+(nowRA===1?'':'s')+' need attention or are at risk this '+pw+', vs '+prevRA+' the previous '+pw+'.</p>'; }
-    var chg=reviewed.filter(function(r){ return /\d/.test(r.s.changes) && r.s.changes.indexOf('>')>=0; }).map(function(r){ return '<div class="tchg"><b>'+esc(r.c.name)+':</b> '+th(r.s.changes)+'</div>'; });
-    trendsHtml='<h2>RAG Trends</h2>'+overallTrend
-      + block('Campaigns improving', improved.map(function(x){ return '<li>'+x+'</li>'; }), 'No campaigns improved vs the previous '+pw+'.')
-      + block('Campaigns declining', declined.map(function(x){ return '<li>'+x+'</li>'; }), 'No campaigns declined vs the previous '+pw+'.')
-      + block('Recurring blockers &amp; issues', recurring.map(function(x){ return '<li>'+x+'</li>'; }), 'No blocker was flagged more than once this '+pw+'.')
-      + (chg.length?('<div class="xblk"><h3>Status changes over time</h3>'+chg.join('')+'</div>'):'');
-  }
+  var trendParts=[];
+  if(anyPrev){ var prevRA=0; rows.forEach(function(r){ if(r.prevOv==='A'||r.prevOv==='R') prevRA++; });
+    var nowRA=counts.A+counts.R; var word=(nowRA<prevRA)?'improving':((nowRA>prevRA)?'declining':'holding steady');
+    trendParts.push('<p class="muted">Overall health is '+word+': '+nowRA+' campaign'+(nowRA===1?'':'s')+' need attention or are at risk this '+pw+', vs '+prevRA+' the previous '+pw+'.</p>'); }
+  var chg=reviewed.filter(function(r){ return /\d/.test(r.s.changes) && r.s.changes.indexOf('>')>=0; }).map(function(r){ return '<div class="tchg"><b>'+esc(r.c.name)+':</b> '+th(r.s.changes)+'</div>'; });
+  if(chg.length) trendParts.push('<div class="xblk"><h3>Status changes over time</h3>'+chg.join('')+'</div>');
+  if(covTrend.length>=2) trendParts.push('<div class="xblk"><h3>Review coverage over time</h3><ul>'+covTrend.map(function(w){ return '<li>Week of '+esc(cragFmtDate(w.ws))+': '+w.pct+'% ('+w.n+'/'+total+')</li>'; }).join('')+'</ul></div>');
+  var trendsHtml=trendParts.length?('<h2>RAG Trends</h2>'+trendParts.join('')):'';
   // daily / weekly notes digest, per campaign
   var noteBlocks=rows.map(function(r){
     var out=[];
@@ -1337,6 +1378,14 @@ function cragReportHtml(scope){
     + '.ncard{border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin:0 0 10px;page-break-inside:avoid} .ncard .nh{font-weight:800;font-size:13.5px;margin-bottom:4px} .ncard ul{margin:4px 0 0;padding-left:18px} .ncard li{font-size:12px;line-height:1.55;margin:3px 0} .nd{font-weight:700;color:#334155}'
     + '.tchg{font-size:12px;line-height:1.5;margin:3px 0}'
     + '.foot{color:#94a3b8;font-size:11px;margin-top:12px} @media print{body{padding:0} .det,.ncard{border-color:#ddd}}'
+    + '.cov{font-size:12.5px;color:#334155;margin:0 0 6px} .cov b{color:#0f172a} .warn{background:#fffbeb;border:1px solid #fde68a;color:#b45309;border-radius:8px;padding:8px 12px;font-size:12px;margin:0 0 14px}'
+    + '.tchip{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:11px;border:1px solid;white-space:nowrap} .tchip.tg{color:#047857;background:#ecfdf5;border-color:#a7f3d0} .tchip.ta{color:#b45309;background:#fffbeb;border-color:#fde68a} .tchip.tf{color:#475569;background:#f1f5f9;border-color:#e2e8f0} .tchip.tm{color:#92400e;background:#fef9c3;border-color:#fde68a} .tchip.tn{color:#64748b;background:#f8fafc;border-color:#e2e8f0}'
+    + '.mtier{border:1px solid #e2e8f0;border-left-width:5px;border-radius:8px;padding:8px 14px;margin:0 0 10px;page-break-inside:avoid} .mtier h3{margin:0 0 4px;font-size:12.5px} .mtier ul{margin:2px 0 0;padding-left:18px} .mtier li{font-size:12.5px;line-height:1.5;margin:2px 0} .mtier .none{color:#64748b;font-size:12px;margin:2px 0} .mt-i{border-left-color:#ef4444} .mt-w{border-left-color:#f59e0b} .mt-f{border-left-color:#94a3b8}'
+    + '.gtab{width:100%;border-collapse:collapse;margin:0 0 14px;font-size:12px} .gtab th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#94a3b8;border-bottom:2px solid #e2e8f0;padding:6px 8px} .gtab td{border-bottom:1px solid #eef2f7;padding:6px 8px;vertical-align:middle} .gtab tr{page-break-inside:avoid}'
+    + '.mvgrid{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px} .mvc{border:1px solid #e2e8f0;border-radius:8px;padding:7px 12px;min-width:96px} .mvc b{display:block;font-size:19px} .mvc span{font-size:10.5px;color:#64748b}'
+    + '.aggt{width:100%;border-collapse:collapse;margin:0 0 8px;font-size:12.5px} .aggt th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#94a3b8;border-bottom:2px solid #e2e8f0;padding:6px 8px} .aggt td{border-bottom:1px solid #eef2f7;padding:6px 8px} .aggt td.n{font-weight:700}'
+    + '.pat{font-size:12.5px;font-weight:600;color:#0f172a;background:#f8fafc;border:1px solid #eef2f7;border-radius:8px;padding:8px 12px;margin:4px 0 12px}'
+    + '.ccmix{font-size:11.5px;color:#92400e;background:#fef9c3;border:1px solid #fde68a;border-radius:6px;padding:4px 9px;margin:0 0 8px} .chead{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}'
     + '</style></head><body>'
     + '<h1>Campaign RAG Summary Report</h1>'
     + '<p class="sub"><b>'+esc(title)+' report</b> &middot; '+esc(periodLabel)+' &middot; '+camps.length+' campaign'+(camps.length===1?'':'s')+'</p>'
@@ -1349,11 +1398,11 @@ function cragReportHtml(scope){
       + '<div class="card"><b>'+counts.R+'</b><span>At Risk (Red)</span></div>'
       + '<div class="card"><b>'+counts.NC+'</b><span>Not reviewed</span></div>'
     + '</div>'
-    + block('Key positive developments &amp; highlights', highlights, 'No standout wins were flagged this '+pw+'. Note: the daily form only saves a note when a category is Amber or Red, so Green days may hold wins that were not written down.')
-    + block('Campaigns that need attention', attentionList, 'No campaigns are in Needs Attention this '+pw+'.')
-    + block('Major risks, blockers &amp; concerns', riskList, 'No campaigns are At Risk this '+pw+'.')
-    + changesBlock
-    + block('Items that may need management / Tech Team attention', mgmt, '')
+    + covHtml
+    + mgmtHtml
+    + glanceHtml
+    + mvHtml
+    + recurHtml
     + '<h2>Campaign Overview</h2>'
     + '<div class="cgrid">'+overview+'</div>'
     + trendsHtml
