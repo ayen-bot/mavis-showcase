@@ -592,6 +592,13 @@ const CRAG_CATS=[
   { key:'cm', label:'Client Responsiveness & Communication', short:'Responsiveness & Comms',
     G:'Responsive and positive communication', A:'Slow or occasional communication concerns', R:'Unresponsive or significant comms issues' }
 ];
+// Phase 2: per-review root cause + communication direction. Driver tells leadership
+// WHY a campaign is Amber/Red; the side map rolls drivers up into CSA-side vs client-side
+// vs tooling/external so "the CSA is struggling" is separable from "the CSA is blocked".
+const CRAG_DRIVERS=['CSA execution','Client responsiveness','Client scope changes','Technical / MAVIS issue','Client approval dependency','Quality / expectation alignment','External dependency','Unknown'];
+const CRAG_DRIVER_SIDE={ 'CSA execution':'CSA','Client responsiveness':'Client','Client scope changes':'Client','Technical / MAVIS issue':'Tooling','Client approval dependency':'Client','Quality / expectation alignment':'Shared','External dependency':'External','Unknown':'Unknown' };
+const CRAG_COMMDIRS=['Client → CSA (client slow / unavailable)','CSA → Client (CSA slow to respond)','Both'];
+function cragOpts(list, sel){ return '<option value="">Select…</option>'+list.map(function(x){ return '<option value="'+esc(x)+'"'+(String(sel||'')===x?' selected':'')+'>'+esc(x)+'</option>'; }).join(''); }
 const CRAG_RAG={
   G:{dot:'🟢',short:'Green',word:'Green',cls:'crag-g'},
   A:{dot:'🟠',short:'Amber',word:'Amber',cls:'crag-a'},
@@ -651,7 +658,8 @@ function cragBuildModel(campRows,ragRows){
     var cm=cragCode(u.communication!=null?u.communication:u.cm);
     if(!tc&&!tq&&!cm) return;
     map[id].updates.push({ date:cragNormDate(u.date), csa:csa||map[id].csa, tc:tc, tq:tq, cm:cm,
-      tcNote:u.completionNote||u.tcNote||'', tqNote:u.qualityNote||u.tqNote||'', cmNote:u.commsNote||u.cmNote||'', ts:u.ts||'' });
+      tcNote:u.completionNote||u.tcNote||'', tqNote:u.qualityNote||u.tqNote||'', cmNote:u.commsNote||u.cmNote||'',
+      driver:u.driver||'', commDir:u.commDir||u.commDirection||'', ts:u.ts||'' });
   });
   return order.map(function(k){return map[k];});
 }
@@ -781,6 +789,9 @@ function cragInjectCss(){
   .cragOv.open{display:flex}
   .cragModal{background:var(--surface);border:1px solid var(--line);border-radius:16px;width:100%;max-width:600px;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)}
   .cragModal.wide{max-width:900px}
+  .cragSel{width:100%;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 10px;font-size:14px}
+  .cragHint{color:var(--muted);font-size:11.5px;margin-top:4px}
+  .cragExtra{margin-top:12px} .cragExtra.hide{display:none}
   .cragMh{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
   .cragMh .t{font-size:17px;font-weight:750;color:var(--ink)}
   .cragMh .s{font-size:12.5px;color:var(--muted);margin-top:3px}
@@ -937,6 +948,9 @@ function cragOpenForm(id){
   var ex=cragTodayUpdate(c);
   var picks={ tc:ex?ex.tc:'', tq:ex?ex.tq:'', cm:ex?ex.cm:'' };
   var notes={ tc:ex?ex.tcNote:'', tq:ex?ex.tqNote:'', cm:ex?ex.cmNote:'' };
+  var preDriver=ex?(ex.driver||''):'', preComm=ex?(ex.commDir||''):'';
+  var anyAR0=(picks.tc==='A'||picks.tc==='R'||picks.tq==='A'||picks.tq==='R'||picks.cm==='A'||picks.cm==='R');
+  var cmAR0=(picks.cm==='A'||picks.cm==='R');
   var catHtml=CRAG_CATS.map(function(cat){
     var segs=[['G','g','Green',cat.G],['A','a','Amber',cat.A],['R','r','Red',cat.R]].map(function(o){
       return '<button type="button" class="cragSegBtn '+o[1]+(picks[cat.key]===o[0]?' sel':'')+'" data-cat="'+cat.key+'" data-rag="'+o[0]+'">'+CRAG_RAG[o[0]].dot+' '+o[2]+'<small>'+esc(o[3])+'</small></button>'; }).join('');
@@ -951,6 +965,8 @@ function cragOpenForm(id){
       +'<div style="display:flex;gap:12px"><div class="cragFld" style="flex:1"><label>CSA</label><div class="cragRO">'+esc(c.csa||'Unassigned')+'</div></div>'
         +'<div class="cragFld" style="flex:1"><label>Date</label><div class="cragRO">'+esc(cragFmtDate(today))+'</div></div></div>'
       +catHtml
+      +'<div class="cragFld cragExtra'+(anyAR0?'':' hide')+'" id="cragDriverWrap"><label>Primary driver (root cause)</label><select id="cragDriver" class="cragSel">'+cragOpts(CRAG_DRIVERS, preDriver)+'</select><div class="cragHint">Why is the status Amber/Red? Lets leadership tell a CSA-side issue from a client block.</div></div>'
+      +'<div class="cragFld cragExtra'+(cmAR0?'':' hide')+'" id="cragCommWrap"><label>Communication holdup direction</label><select id="cragCommDir" class="cragSel">'+cragOpts(CRAG_COMMDIRS, preComm)+'</select><div class="cragHint">When Responsiveness is Amber/Red: who is the holdup?</div></div>'
       +'<div class="cragOvrRow" id="cragOvrPreview">Overall Client Status: <span id="cragOvrVal">'+cragOvrBadge('NC')+'</span></div>'
     +'</div>'
     +'<div class="cragMf"><span class="cragErr" id="cragErr"></span><span style="display:flex;gap:8px"><button class="cragBtn" id="cragCancel">Cancel</button><button class="cragBtn cragBtnP" id="cragSave">Save Review</button></span></div>';
@@ -959,6 +975,9 @@ function cragOpenForm(id){
     var cat=b.getAttribute('data-cat'), rag=b.getAttribute('data-rag'); picks[cat]=rag;
     m.querySelectorAll('.cragSegBtn[data-cat="'+cat+'"]').forEach(function(x){x.classList.remove('sel');}); b.classList.add('sel');
     var nw=$('#cragNoteWrap_'+cat); if(nw) nw.classList.toggle('hide', !(rag==='A'||rag==='R'));
+    var anyAR=(picks.tc==='A'||picks.tc==='R'||picks.tq==='A'||picks.tq==='R'||picks.cm==='A'||picks.cm==='R');
+    var dw=$('#cragDriverWrap'); if(dw) dw.classList.toggle('hide', !anyAR);
+    var cw=$('#cragCommWrap'); if(cw) cw.classList.toggle('hide', !(picks.cm==='A'||picks.cm==='R'));
     var e=$('#cragErr'); if(e) e.textContent=''; refreshOverall();
   }; });
   CRAG_CATS.forEach(function(cat){ var t=$('#cragNote_'+cat.key), o=$('#cragNoteC_'+cat.key);
@@ -967,15 +986,19 @@ function cragOpenForm(id){
   $('#cragMx').onclick=cragCloseModal; $('#cragCancel').onclick=cragCloseModal;
   $('#cragSave').onclick=function(){
     if(!picks.tc||!picks.tq||!picks.cm){ $('#cragErr').textContent='Rate all three categories first.'; return; }
-    cragSaveReview(id, picks, { tc:($('#cragNote_tc').value||''), tq:($('#cragNote_tq').value||''), cm:($('#cragNote_cm').value||'') });
+    var driver=($('#cragDriver')&&$('#cragDriver').value)||'', commDir=($('#cragCommDir')&&$('#cragCommDir').value)||'';
+    cragSaveReview(id, picks, { tc:($('#cragNote_tc').value||''), tq:($('#cragNote_tq').value||''), cm:($('#cragNote_cm').value||'') }, { driver:driver, commDir:commDir });
   };
   var ov=$('#cragOv'); ov.classList.add('open'); ov.onclick=function(e){ if(e.target===ov) cragCloseModal(); };
 }
-function cragSaveReview(id, picks, notes){
-  var c=cragCampaign(id); if(!c) return; if(!c.updates)c.updates=[]; var today=cragToday();
+function cragSaveReview(id, picks, notes, extra){
+  var c=cragCampaign(id); if(!c) return; if(!c.updates)c.updates=[]; var today=cragToday(); extra=extra||{};
   function nt(k){ return (picks[k]==='A'||picks[k]==='R') ? String(notes[k]||'').slice(0,200).trim() : ''; }
+  var anyAR=(picks.tc==='A'||picks.tc==='R'||picks.tq==='A'||picks.tq==='R'||picks.cm==='A'||picks.cm==='R');
+  var driver=anyAR?String(extra.driver||'').slice(0,60):'';
+  var commDir=(picks.cm==='A'||picks.cm==='R')?String(extra.commDir||'').slice(0,60):'';
   var rec={ date:today, csa:c.csa||'', tc:picks.tc, tq:picks.tq, cm:picks.cm,
-    tcNote:nt('tc'), tqNote:nt('tq'), cmNote:nt('cm'), ts:cragNowTs(), pending:true };
+    tcNote:nt('tc'), tqNote:nt('tq'), cmNote:nt('cm'), driver:driver, commDir:commDir, ts:cragNowTs(), pending:true };
   var idx=-1; for(var i=0;i<c.updates.length;i++){ if(c.updates[i].date===today){ idx=i; break; } }
   if(idx>=0) c.updates[idx]=rec; else c.updates.push(rec);
   cragCacheSave(); cragCloseModal(); cragRenderStats(); cragRenderTable();
@@ -983,7 +1006,7 @@ function cragSaveReview(id, picks, notes){
   var overall=cragWorst([rec.tc,rec.tq,rec.cm])||'G';
   var body={ action:'logRag', campaign:c.name, csa:c.csa||'', date:today,
     taskCompletion:CRAG_RAG[rec.tc].word, taskQuality:CRAG_RAG[rec.tq].word, communication:CRAG_RAG[rec.cm].word,
-    overall:CRAG_OVR[overall]?CRAG_OVR[overall].word:'', completionNote:rec.tcNote, qualityNote:rec.tqNote, commsNote:rec.cmNote };
+    overall:CRAG_OVR[overall]?CRAG_OVR[overall].word:'', completionNote:rec.tcNote, qualityNote:rec.tqNote, commsNote:rec.cmNote, driver:rec.driver, commDir:rec.commDir };
   fetch(u,{ method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) })
     .then(function(r){ return r.json(); })
     .then(function(j){ if(j&&j.ok){ rec.pending=false; cragModel.backup='live'; cragCacheSave(); cragRenderStatus(); cragRenderTable(); } })
@@ -1319,6 +1342,31 @@ function cragReportHtml(scope){
       + '<p class="pat">Pattern: '+esc(aggRows[0].cat)+' is the most widespread recurring issue this '+pw+'.</p>'
       + '<div class="xblk"><h3>By campaign</h3><ul>'+perLine.join('')+'</ul></div>';
   } else { recurHtml+='<p class="muted">No category was flagged twice or more this '+pw+'.</p>'; }
+  // ---- #4 root cause / drivers + #5 communication health & direction ----
+  function campDriver(r){ var cc={}; r.ups.forEach(function(u){ var ov=cragUpdOverall(u); if(ov==='A'||ov==='R'){ var d=String(u.driver||'').trim(); if(d) cc[d]=(cc[d]||0)+1; } });
+    var ks=Object.keys(cc).sort(function(a,b){ return cc[b]-cc[a]; }); return ks[0]||''; }
+  function commDirOf(r){ var dir=''; r.ups.forEach(function(u){ if((u.cm==='A'||u.cm==='R') && String(u.commDir||'').trim()) dir=String(u.commDir).trim(); }); return dir; }
+  var drvCount={}, sideCount={};
+  rows.forEach(function(r){ r.ups.forEach(function(u){ var ov=cragUpdOverall(u); if(ov==='A'||ov==='R'){ var d=String(u.driver||'').trim(); if(d){ drvCount[d]=(drvCount[d]||0)+1; var side=CRAG_DRIVER_SIDE[d]||'Unknown'; sideCount[side]=(sideCount[side]||0)+1; } } }); });
+  var drvRows=Object.keys(drvCount).sort(function(a,b){ return drvCount[b]-drvCount[a]; });
+  var driverHtml='<h2>Root Cause &amp; Drivers</h2>';
+  if(drvRows.length){
+    var sideOrder=['CSA','Client','Shared','Tooling','External','Unknown'];
+    var sideLabel={ CSA:'CSA-side', Client:'Client-side', Shared:'Shared', Tooling:'Tooling / MAVIS', External:'External', Unknown:'Unknown' };
+    driverHtml+='<div class="mvgrid">'+sideOrder.filter(function(s){ return sideCount[s]; }).map(function(s){ return mvc(sideCount[s], sideLabel[s]); }).join('')+'</div>';
+    var csaN=sideCount.CSA||0, cliN=sideCount.Client||0;
+    if(csaN||cliN){ driverHtml+='<p class="pat">Read: most Amber/Red days trace to '+(csaN>cliN?'CSA-side execution':(cliN>csaN?'client-side blocks such as responsiveness, scope, or approvals':'a mix of CSA-side and client-side causes'))+' this '+pw+'.</p>'; }
+    driverHtml+='<table class="aggt"><thead><tr><th>Driver</th><th>Flagged days</th></tr></thead><tbody>'+drvRows.map(function(d){ return '<tr><td>'+esc(d)+'</td><td class="n">'+drvCount[d]+'</td></tr>'; }).join('')+'</tbody></table>';
+  } else { driverHtml+='<p class="muted">No root-cause drivers captured yet. These fill in once CSAs use the updated daily review form and the backup sheet is redeployed with the new columns.</p>'; }
+  var commRows=reviewed.filter(function(r){ return catFlags(r.ups,'cm').length; }).map(function(r){
+    var flags=catFlags(r.ups,'cm'); var last=r.ups[r.ups.length-1]; var lastCm=last?last.cm:'';
+    var level=(flags.length>=2||lastCm==='R')?'Repeatedly unavailable':'Delayed / intermittent';
+    var dir=commDirOf(r);
+    return '<tr><td>'+esc(r.c.name)+'</td><td>'+level+'</td><td>'+(dir?esc(dir):'Not captured yet')+'</td></tr>';
+  });
+  var commHtml='<h2>Communication Health</h2>';
+  if(commRows.length){ commHtml+='<p class="cov">Where responsiveness was flagged this '+pw+', and who the holdup is.</p><table class="gtab"><thead><tr><th>Campaign</th><th>Communication</th><th>Holdup direction</th></tr></thead><tbody>'+commRows.join('')+'</tbody></table>'; }
+  else { commHtml+='<p class="muted">No communication issues flagged this '+pw+'. Everything reviewed is proactive or responsive.</p>'; }
   // ---- campaign overview cards (health + trend split, plus the mixed nuance line) ----
   var overview=rows.map(function(r){
     var reviewedThis=r.s.daysReviewed>0;
@@ -1336,6 +1384,7 @@ function cragReportHtml(scope){
         +'<div class="ccsec"><h4>Key progress &amp; wins</h4><p>'+th(r.s.wins)+'</p></div>'
         +'<div class="ccsec"><h4>Current blocker / risk</h4><p>'+th(r.s.blockers)+'</p></div>'
         +(rec.length?('<div class="ccsec"><h4>Recurring / watch-outs</h4><p>'+esc(rec.join('; '))+'</p></div>'):'')
+        +(campDriver(r)?('<div class="ccsec"><h4>Root cause</h4><p>'+esc(campDriver(r))+(commDirOf(r)?(' &middot; '+esc(commDirOf(r))):'')+'</p></div>'):'')
         +'<div class="ccsec"><h4>Next action / priority</h4><p>'+th(r.s.nextFocus)+'</p></div>'
       ):'<div class="ccsec"><p class="muted">No daily review was logged this '+pw+', so there is no summary to show.</p></div>')
       +'</div>';
@@ -1403,6 +1452,8 @@ function cragReportHtml(scope){
     + glanceHtml
     + mvHtml
     + recurHtml
+    + driverHtml
+    + commHtml
     + '<h2>Campaign Overview</h2>'
     + '<div class="cgrid">'+overview+'</div>'
     + trendsHtml
