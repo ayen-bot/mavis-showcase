@@ -659,7 +659,24 @@ function cragCacheSave(){ try{ localStorage.setItem(CRAG_CACHE_KEY, JSON.stringi
 function cragCacheLoad(){ try{ var raw=localStorage.getItem(CRAG_CACHE_KEY); if(raw){ var j=JSON.parse(raw); if(j&&Array.isArray(j.campaigns)){ j.campaigns.forEach(function(c){ c.updates=cragDedupeUpdates(c.updates); }); cragModel.campaigns=j.campaigns; cragModel.loadedAt=j.at||''; return true; } } }catch(e){} return false; }
 
 // ---------- sync ----------
-function cragGet(action){ var u=cragApi(); if(!u) return Promise.reject('no-url'); return fetch(u+'?action='+action,{method:'GET'}).then(function(r){return r.json();}); }
+// Apps Script web apps occasionally answer a cold-start request with an HTML
+// interstitial (or a transient error) instead of JSON, especially when several
+// calls fire at once. That made one action silently drop out and surfaced a
+// false "RAG Log could not be read". Read as text, parse defensively, and retry
+// once after a short pause before giving up.
+function cragGet(action){ var u=cragApi(); if(!u) return Promise.reject('no-url');
+  var url=u+'?action='+action;
+  function attempt(n){
+    return fetch(url,{method:'GET'}).then(function(r){ return r.text(); }).then(function(t){
+      var j; try{ j=JSON.parse(t); }catch(e){ throw new Error('non-json response'); }
+      return j;
+    }).catch(function(e){
+      if(n>0){ return new Promise(function(res){ setTimeout(res,700); }).then(function(){ return attempt(n-1); }); }
+      throw e;
+    });
+  }
+  return attempt(1);
+}
 function cragRosterRows(){ return CRAG_ROSTER.map(function(p){ return { campaign:p[0], csa:p[1] }; }); }
 function cragValidDate(d){ return /^\d{4}-\d{2}-\d{2}$/.test(String(d||'')); }
 // Collapse a campaign's updates to one per calendar day. Drops corrupted remnants
