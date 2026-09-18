@@ -1352,7 +1352,59 @@ function cragPrintHtml(html){
     setTimeout(function(){ try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){} setTimeout(function(){ try{ f.remove(); }catch(e){} }, 1500); }, 450);
   }catch(e){ alert('Could not open the print dialog. Try again, or use a desktop browser.'); }
 }
-function cragExportReport(scope){ cragPrintHtml(cragReportHtml(scope)); }
+// filesystem-safe filename for the exported PDF
+function cragPdfFilename(scope){
+  var isMonth=(scope==='month');
+  var start=isMonth?cragMonthStart(cragToday()):cragWeekStart(cragToday());
+  var lbl=isMonth?cragMonthLabel(cragToday()):(cragFmtDate(start)+' to '+cragFmtDate(cragWeekEnd(start))+' '+start.slice(0,4));
+  return ('Campaign RAG Summary Report - '+lbl+'.pdf').replace(/[\\/:*?"<>|]/g,'-');
+}
+// lazy-load the html2pdf bundle only when the user actually exports; offline-safe (falls back to print)
+function cragLoadHtml2pdf(){
+  if(window.html2pdf) return Promise.resolve(window.html2pdf);
+  if(cragLoadHtml2pdf._p) return cragLoadHtml2pdf._p;
+  cragLoadHtml2pdf._p=new Promise(function(res,rej){
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.3/html2pdf.bundle.min.js';
+    s.onload=function(){ window.html2pdf?res(window.html2pdf):rej(new Error('html2pdf missing')); };
+    s.onerror=function(){ cragLoadHtml2pdf._p=null; rej(new Error('html2pdf load failed')); };
+    document.head.appendChild(s);
+  });
+  return cragLoadHtml2pdf._p;
+}
+// fallback: open the standalone report in a new tab and trigger the print dialog (Save as PDF)
+function cragPrintFallback(html){
+  var w=null; try{ w=window.open('', '_blank'); }catch(e){}
+  if(w&&w.document){ var doc=html.replace('</body>','<script>window.onload=function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},350);};<\/script></body>');
+    w.document.open(); w.document.write(doc); w.document.close(); return true; }
+  cragPrintHtml(html); return false;
+}
+// primary export: render the report offscreen in an isolated iframe (no style bleed into the
+// hub) and download it as a real .pdf in one click; falls back to print on any failure
+function cragExportReport(scope){
+  var html=cragReportHtml(scope);
+  var eb=$('#cragExportBtn'); var lbl0=eb?eb.textContent:''; if(eb){ eb.textContent='Preparing PDF…'; }
+  var f=document.createElement('iframe');
+  f.setAttribute('aria-hidden','true');
+  f.style.cssText='position:fixed;left:-10000px;top:0;width:820px;height:1160px;border:0;';
+  document.body.appendChild(f);
+  var d=f.contentWindow.document; d.open(); d.write(html); d.close();
+  var settled=false;
+  var restore=function(){ if(eb&&lbl0) eb.textContent=lbl0; };
+  var cleanup=function(){ if(settled) return; settled=true; restore(); setTimeout(function(){ try{ f.remove(); }catch(e){} }, 600); };
+  cragLoadHtml2pdf().then(function(h2p){
+    return new Promise(function(res){ setTimeout(res, 350); }).then(function(){
+      return h2p().set({
+        margin:[10,10,14,10],
+        filename:cragPdfFilename(scope),
+        image:{type:'jpeg',quality:0.98},
+        html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:820},
+        jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+        pagebreak:{mode:['css','avoid-all']}
+      }).from(f.contentWindow.document.body).save();
+    });
+  }).then(cleanup).catch(function(){ cleanup(); cragPrintFallback(html); });
+}
 function wireCampaignRag(){
   cragInjectCss(); cragCacheLoad(); cragWeeklyCacheLoad(); cragRenderAll();
   var rf=$('#cragRefresh'); if(rf) rf.onclick=cragSync;
