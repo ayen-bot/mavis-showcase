@@ -2934,49 +2934,30 @@ function cragPdfFilename(scope){
   var lbl=isMonth?cragMonthLabel(cragToday()):(cragFmtDate(start)+' to '+cragFmtDate(cragWeekEnd(start))+' '+start.slice(0,4));
   return ('Campaign RAG Summary Report - '+lbl+'.pdf').replace(/[\\/:*?"<>|]/g,'-');
 }
-// fallback: open the standalone report in a new tab and trigger the print dialog (Save as PDF)
-function cragPrintFallback(html){
-  var w=null; try{ w=window.open('', '_blank'); }catch(e){}
-  if(w&&w.document){ var doc=html.replace('</body>','<script>window.onload=function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},350);};<\/script></body>');
-    w.document.open(); w.document.write(doc); w.document.close(); return true; }
-  cragPrintHtml(html); return false;
+// print-optimising CSS injected into the report before export: keep the status
+// colours (color-adjust:exact prints them even with "Background graphics" off),
+// give the page a sane margin, and avoid splitting a card across two pages.
+function cragPrintCss(){
+  return '<style>@media print{@page{margin:12mm;}html,body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;background:#fff!important;}body{padding:0!important;}h2{break-after:avoid;}.ccard,.ncard,.det,.xblk{break-inside:avoid;}}<\/style>';
 }
-// primary export: render the report in an isolated offscreen iframe and run the PDF library
-// INSIDE that iframe, so the report's own light, full-width styling applies (the hub's dark
-// theme + narrow layout must NOT bleed in). Downloads a real .pdf in one click; if the library
-// cannot load (offline/CDN blocked) it falls back to opening a print-ready tab (Save as PDF).
+// Export the report as a clean, TEXT-BASED PDF via the browser's native print
+// engine (Save as PDF). This keeps real, selectable text with correct spacing.
+// The previous html2pdf/html2canvas path rasterised the page, which garbled
+// kerning and word spacing ("dancing letters"). We open the report in its own
+// tab with print CSS and auto-trigger the print dialog; the document title is
+// set to the report name so the browser suggests it as the PDF filename. If the
+// popup is blocked we print from a hidden iframe instead (still native, still clean).
 function cragExportReport(scope){
-  var html=cragReportHtml(scope);
-  var eb=$('#cragExportBtn'); var lbl0=eb?eb.textContent:''; if(eb){ eb.textContent='Preparing PDF…'; }
-  var f=document.createElement('iframe');
-  f.setAttribute('aria-hidden','true');
-  f.style.cssText='position:fixed;left:-10000px;top:0;width:820px;height:1160px;border:0;background:#fff;';
-  document.body.appendChild(f);
-  var win=f.contentWindow, d=win.document;
-  var doc=html.replace('</head>','<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.3/html2pdf.bundle.min.js"><\/script></head>');
-  d.open(); d.write(doc); d.close();
-  var settled=false;
-  var finish=function(useFallback){ if(settled) return; settled=true; if(eb&&lbl0) eb.textContent=lbl0;
-    if(useFallback) cragPrintFallback(html);
-    setTimeout(function(){ try{ f.remove(); }catch(e){} }, 800); };
-  var t0=Date.now();
-  (function run(){
-    if(win.html2pdf){
-      try{
-        win.html2pdf().set({
-          margin:10,
-          filename:cragPdfFilename(scope),
-          image:{type:'jpeg',quality:0.98},
-          html2canvas:{scale:2,backgroundColor:'#ffffff',useCORS:true,windowWidth:820},
-          jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-          pagebreak:{mode:['css','avoid-all']}
-        }).from(d.body).save().then(function(){ finish(false); }, function(){ finish(true); });
-      }catch(e){ finish(true); }
-      return;
-    }
-    if(Date.now()-t0>9000){ finish(true); return; }
-    setTimeout(run, 150);
-  })();
+  var title=cragPdfFilename(scope).replace(/\.pdf$/,'');
+  var html=cragReportHtml(scope)
+    .replace('</head>', cragPrintCss()+'</head>')
+    .replace(/<title>[^<]*<\/title>/, '<title>'+title+'<\/title>');
+  var eb=$('#cragExportBtn'); var lbl0=eb?eb.textContent:'';
+  if(eb){ eb.textContent='Opening PDF…'; setTimeout(function(){ if(eb) eb.textContent=lbl0; }, 2500); }
+  var doc=html.replace('</body>','<script>window.onload=function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},400);};<\/script></body>');
+  var w=null; try{ w=window.open('', '_blank'); }catch(e){}
+  if(w&&w.document){ w.document.open(); w.document.write(doc); w.document.close(); return; }
+  cragPrintHtml(html);
 }
 function wireCampaignRag(){
   cragInjectCss(); cragCacheLoad(); cragWeeklyCacheLoad(); cragRenderAll();
