@@ -3050,7 +3050,7 @@ const MAVIS_SKILLS=[
    prompt:'/html-to-pdf render this weekly client KPI report as a clean, printable PDF',
    output:'PDF ready in your review queue.\n\nFile: client_report_sept2026.pdf (4 pages)\n\nPg 1  KPI summary (Tasks Completed, On-Time Rate,\n      Client Score)\nPg 2  Weekly breakdown table\nPg 3  Activity log\nPg 4  Notes + next steps\n\nClick "Download" from the queue.\nOr grab the direct link to embed in a Drive folder.',
    usecase:'Turning a data dashboard or HTML report into a polished deliverable for the client.'},
-  {id:'remotion',vid:'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',cat:'Content',ic:'&#127909;',name:'remotion',
+  {id:'remotion',vid:'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',cat:'Content',ic:'&#127909;',name:'remotion',
    what:'Builds, animates, and renders videos using React-based Remotion. Handles frame-driven animations, compositions, and cloud rendering to MP4, WebM, or GIF.',
    call:'/remotion [description]',
    prompt:'/remotion create a 20-second animated product demo showing MAVIS handling a task from start to finish',
@@ -3175,7 +3175,7 @@ function viewSim(){
       <div class="prosK">Sample prompt</div>
       <div class="prosEg">${esc(sk.prompt)}</div>
       <div class="prosK" style="margin-top:10px">Sample output</div>
-      ${sk.img ? `<img src="${sk.img}" style="width:100%;border-radius:8px;display:block;margin-top:4px">` : sk.vid ? `<video src="${sk.vid}" controls playsinline style="width:100%;border-radius:8px;display:block;margin-top:4px"></video>` : `<div class="prosEg" style="border-left-color:rgba(16,185,129,.45);background:rgba(16,185,129,.06);color:var(--ink);font-style:normal;white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;line-height:1.6">${esc(sk.output)}</div>`}
+      ${sk.img ? `<img src="${sk.img}" style="width:100%;border-radius:8px;display:block;margin-top:4px">` : sk.vid ? `<video src="${sk.vid}" autoplay muted loop playsinline style="width:100%;border-radius:8px;display:block;margin-top:4px"></video>` : `<div class="prosEg" style="border-left-color:rgba(16,185,129,.45);background:rgba(16,185,129,.06);color:var(--ink);font-style:normal;white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;line-height:1.6">${esc(sk.output)}</div>`}
       <button class="wizghost" style="margin-top:10px;align-self:flex-start">View details &rarr;</button>
     </div>`;
   }
@@ -3199,7 +3199,7 @@ function wireSim(){
       <div class="field"><div class="k">What it does</div><div class="v">${esc(sk.what)}</div></div>
       <div class="field"><div class="k">How to call it</div><div class="v"><code style="background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.25);border-radius:8px;padding:8px 12px;display:block;font-size:12.5px;color:var(--acc);font-family:ui-monospace,Menlo,monospace">${esc(sk.call)}</code></div></div>
       <div class="field"><div class="k">Sample prompt</div><div class="promptbox"><span class="qlabel">Say to MAVIS</span>${esc(sk.prompt)}</div></div>
-      <div class="field"><div class="k">Sample output</div><div class="v">${sk.img ? `<img src="${sk.img}" style="width:100%;border-radius:8px;display:block">` : sk.vid ? `<video src="${sk.vid}" controls playsinline style="width:100%;border-radius:8px;display:block"></video>` : `<span style="background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.22);border-radius:10px;padding:11px 13px;white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.6;display:block">${esc(sk.output)}</span>`}</div></div>
+      <div class="field"><div class="k">Sample output</div><div class="v">${sk.img ? `<img src="${sk.img}" style="width:100%;border-radius:8px;display:block">` : sk.vid ? `<video src="${sk.vid}" autoplay muted loop playsinline style="width:100%;border-radius:8px;display:block"></video>` : `<span style="background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.22);border-radius:10px;padding:11px 13px;white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.6;display:block">${esc(sk.output)}</span>`}</div></div>
       <div class="field"><div class="k">Practical use case</div><div class="v">${esc(sk.usecase)}</div></div>
     </div>`);
   });
