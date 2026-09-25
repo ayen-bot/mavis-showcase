@@ -21,7 +21,7 @@ function animate(root){
 
 const VIEWS = [
   ['live','Live MAVIS Analysis','✦'],
-  ['sim','MAVIS Simulator','▶'],
+  ['sim','MAVIS Skills','⚡'],
   ['deliverables','What MAVIS Can Do','✧'],
   ['tools','Tools','⚙'],
   ['csa','CSA (Client Systems Architect)','◈'],
@@ -39,7 +39,7 @@ const recent = [];
 // ---------- page titles + hash routing (each view / CSA tab = an addressable page) ----------
 const PAGE_TITLES = {
   links:'Links Bank',
-  live:'Live MAVIS Analysis', sim:'MAVIS Simulator', deliverables:'What MAVIS Can Do',
+  live:'Live MAVIS Analysis', sim:'MAVIS Skills', deliverables:'What MAVIS Can Do',
   tools:'Tools', csa:'CSA', prospecting:'Prospecting & Lead Gen', va:'VA Toolkit',
   csatech:'CSA Tech Manager', mytickets:'Ticket Log', campaignrag:'Campaign RAG Status', apibanks:'API Banks', catalog:'Integration Library',
   discover:'Search', overview:'Overview', workflows:'Workflows', opportunities:'Opportunities',
@@ -3025,19 +3025,182 @@ const WS_NAV=[
   {id:'skill',ic:'&#10024;',grp:'STUDIOS',name:'Skill Studio',explain:'Teach MAVIS new capabilities and refine how it handles your specific workflows &mdash; the more you shape it, the more it sounds and acts like your team.'},
 ];
 function wsNavHTML(){ let html='',lastGrp=''; WS_NAV.forEach(n=>{ if(n.grp!==lastGrp){ html+=`<div class="wsGrp">${n.grp}</div>`; lastGrp=n.grp; } html+=`<button class="wsNavItem${n.id===wsState.sec?' active':''}" data-sec="${n.id}"><span class="wsNi">${n.ic}</span>${n.name}</button>`; }); return html; }
+const MAVIS_SKILLS=[
+  {id:'deep-research',cat:'Research',ic:'&#128269;',name:'deep-research',
+   what:'Multi-source web research. Fans out searches, adversarially fact-checks each claim, and returns a cited report. Best for questions that need breadth and verification.',
+   call:'/deep-research [your question]',
+   prompt:'/deep-research what are the most effective onboarding frameworks for remote VAs in 2025?',
+   output:'A structured cited report: 4-6 verified findings, each sourced. Unconfirmed claims are explicitly flagged.',
+   usecase:'Researching a client pitch, competitive landscape, or best-practice question before making a recommendation.'},
+  {id:'pdf-reading',cat:'Research',ic:'&#128196;',name:'pdf-reading',
+   what:'Preprocesses PDFs into readable text and page images before reading. Works for local files, Drive, and S3 fetches. Handles large or complex PDFs that raw reading would miss.',
+   call:'/pdf-reading',
+   prompt:'/pdf-reading [attach or link the PDF] summarize the key terms from this contract',
+   output:'Extracted text with a page-by-page breakdown and a plain-English summary of the requested section.',
+   usecase:'Reviewing a client contract, SOW, or onboarding packet without manual copy-paste.'},
+  {id:'social-media-graphic',cat:'Content',ic:'&#10022;',name:'social-media-graphic',
+   what:'Generates platform-optimized graphics for Instagram, Facebook, LinkedIn, and Twitter. Uses the client brand kit when available.',
+   call:'/social-media-graphic [description]',
+   prompt:'/social-media-graphic create an Instagram post graphic for a MAVIS product launch, dark background, cyan accent, bold headline: AI that works for you',
+   output:'A PNG graphic saved to the review queue, sized and formatted for the target platform.',
+   usecase:'Producing on-brand social assets without a designer when the client needs a quick post.'},
+  {id:'html-to-pdf',cat:'Content',ic:'&#128203;',name:'html-to-pdf',
+   what:'Renders an HTML document into a styled, paginated, downloadable PDF using headless Chromium. Use for reports, invoices, proposals, or any print-formatted document.',
+   call:'/html-to-pdf',
+   prompt:'/html-to-pdf render this weekly client KPI report as a clean, printable PDF',
+   output:'A styled PDF registered in the review queue, ready to share or attach to an email.',
+   usecase:'Turning a data dashboard or HTML report into a polished deliverable for the client.'},
+  {id:'remotion',cat:'Content',ic:'&#127909;',name:'remotion',
+   what:'Builds, animates, and renders videos using React-based Remotion. Handles frame-driven animations, compositions, and cloud rendering to MP4, WebM, or GIF.',
+   call:'/remotion [description]',
+   prompt:'/remotion create a 20-second animated product demo showing MAVIS handling a task from start to finish',
+   output:'A rendered MP4 or GIF with frame-by-frame animation, ready to publish or embed.',
+   usecase:'Creating a polished product explainer or client onboarding video without a video editor.'},
+  {id:'frontend-development',cat:'Development',ic:'&#128187;',name:'frontend-development',
+   what:'Builds production-ready Next.js and TypeScript frontend apps with responsive design, accessibility, testing, and performance optimization.',
+   call:'/frontend-development [description]',
+   prompt:'/frontend-development build a dashboard showing CSA capacity by week, pulling from a Google Sheet, with a filter by pod',
+   output:'A fully functional Next.js app with components, routing, and a working data connection, ready to deploy.',
+   usecase:'Standing up an internal tool or client-facing dashboard faster than a standard dev sprint.'},
+  {id:'claude-api',cat:'Development',ic:'&#129302;',name:'claude-api',
+   what:'Builds, debugs, and optimizes Claude API and Anthropic SDK apps. Handles prompt caching, tool use, model migrations, and batch processing.',
+   call:'/claude-api [description]',
+   prompt:'/claude-api add prompt caching to this Anthropic SDK chatbot to reduce token costs on repeated context',
+   output:'Updated code with caching implemented, cache hit rate explained, and a cost-reduction estimate.',
+   usecase:'Optimizing a MAVIS or Claude integration to cut API costs or improve response speed.'},
+  {id:'code-review',cat:'Development',ic:'&#128270;',name:'code-review',
+   what:'Reviews the current diff for correctness bugs, simplification opportunities, and efficiency improvements. Pass --comment to post inline PR comments, or --fix to apply changes directly.',
+   call:'/code-review [--comment | --fix] [low|medium|high]',
+   prompt:'/code-review --fix high',
+   output:'A list of confirmed findings with file and line references. Fixes optionally applied directly to the working tree.',
+   usecase:'Catching bugs before merging a PR or before shipping a fix to a live dashboard.'},
+  {id:'simplify',cat:'Development',ic:'&#10024;',name:'simplify',
+   what:'Reviews changed code for reuse, simplification, and efficiency. Quality-focused only, not a bug finder. Use /code-review for bug catching.',
+   call:'/simplify',
+   prompt:'/simplify',
+   output:'Identified simplifications applied directly to the working tree, with a brief explanation of each change.',
+   usecase:'Cleaning up a feature before a PR review when the code works but feels over-engineered.'},
+  {id:'security-review',cat:'Development',ic:'&#128274;',name:'security-review',
+   what:'Runs a complete security review of pending changes on the current branch. Checks for OWASP top 10 vulnerabilities, injection risks, auth flaws, and data exposure.',
+   call:'/security-review',
+   prompt:'/security-review',
+   output:'A security report listing confirmed vulnerabilities by severity, with file references and remediation steps.',
+   usecase:'Before deploying any client-facing tool or API that handles data, credentials, or user input.'},
+  {id:'browser-automation',cat:'Lead Gen',ic:'&#127760;',name:'browser-automation',
+   what:'Drives a headless browser via Playwright accessibility tools. Best for public, unauthenticated pages. Defer authenticated flows to Pipedream integrations.',
+   call:'/browser-automation [task description]',
+   prompt:'/browser-automation go to this public job board and extract all open roles: title, company, location, and apply link',
+   output:'A structured list or CSV of extracted data from the target page.',
+   usecase:'Pulling public competitor pricing, job postings, or directory listings without manual copy-paste.'},
+  {id:'d7-lead-finder',cat:'Lead Gen',ic:'&#128202;',name:'d7-lead-finder',
+   what:'Multi-geo lead scraping via D7 Lead Finder. Runs a rate-limited fan-out across one or more cities or states and returns a merged, deduplicated CSV.',
+   call:'/d7-lead-finder [industry] [cities or states]',
+   prompt:'/d7-lead-finder accounting firms in Miami, Atlanta, and Charlotte',
+   output:'A deduplicated CSV with company name, phone, email, address, and website for each match.',
+   usecase:'Building a cold outreach list for a client targeting a specific vertical in multiple markets.'},
+  {id:'update-config',cat:'Automation',ic:'&#9881;',name:'update-config',
+   what:'Configures the Claude Code harness: hooks, permissions, env vars, and automated behaviors. Required for "from now on when X" style rules that need system-level execution.',
+   call:'/update-config [description of the rule or setting]',
+   prompt:'/update-config whenever a file is saved, run the linter automatically',
+   output:'Updated settings.json with the new hook or permission added, and a confirmation of what changed.',
+   usecase:'Setting up a persistent workflow rule once so it runs automatically every session.'},
+  {id:'loop',cat:'Automation',ic:'&#128260;',name:'loop',
+   what:'Runs a prompt or slash command on a recurring interval within a session. Self-pacing if no interval is given. Use for polling, monitoring, or repeating a task.',
+   call:'/loop [interval] [command or prompt]',
+   prompt:'/loop 5m check if the Vercel deploy finished and report the status',
+   output:'Repeats the check every 5 minutes and reports back each time until the condition is met or the loop is stopped.',
+   usecase:'Watching a CI run, waiting on a deploy, or checking an external service without re-running manually.'},
+  {id:'schedule',cat:'Automation',ic:'&#128197;',name:'schedule',
+   what:'Creates, updates, lists, or runs scheduled remote agents on a cron schedule. Also handles one-time future runs. Persists across sessions.',
+   call:'/schedule [description]',
+   prompt:'/schedule run a CSA EOD summary report every Friday at 5:00 PM Eastern',
+   output:'A confirmed scheduled job with a cron expression, next-run time, and a link to manage it.',
+   usecase:'Automating a weekly EOD report, a daily health check, or any recurring task that should run without a manual trigger.'},
+  {id:'fewer-permission-prompts',cat:'Automation',ic:'&#128737;',name:'fewer-permission-prompts',
+   what:'Scans recent transcripts for common read-only tool calls and adds a prioritized allowlist to project settings to reduce future approval prompts.',
+   call:'/fewer-permission-prompts',
+   prompt:'/fewer-permission-prompts',
+   output:'An updated .claude/settings.json with safe tool calls allowlisted, reducing future interruptions.',
+   usecase:'After a few working sessions, run this to stop seeing prompts for routine read-only actions.'},
+  {id:'keybindings-help',cat:'Automation',ic:'&#9000;',name:'keybindings-help',
+   what:'Customizes keyboard shortcuts and rebinds keys in ~/.claude/keybindings.json. Supports chord bindings and custom submit key configs.',
+   call:'/keybindings-help [what to change]',
+   prompt:'/keybindings-help rebind Ctrl+Enter to submit instead of Shift+Enter',
+   output:'Updated keybindings.json with the new binding confirmed.',
+   usecase:'Adjusting the submit key or adding a chord shortcut to match your personal workflow.'},
+  {id:'verify',cat:'QA',ic:'&#9989;',name:'verify',
+   what:'Runs the app and observes real behavior to confirm a change actually works. Validates the golden path and edge cases in the live app, not just in tests.',
+   call:'/verify [what to check]',
+   prompt:'/verify the login redirect fix works and does not break the dashboard route',
+   output:'A step-by-step test report: what was checked, what passed, and any unexpected behavior found.',
+   usecase:'Before reporting a bug as fixed, confirm it is resolved in the running app, not just in the code.'},
+  {id:'run',cat:'QA',ic:'&#9654;',name:'run',
+   what:'Launches and drives the project app to confirm a change works in the real environment. Finds the right start command for the project type automatically.',
+   call:'/run',
+   prompt:'/run start the app and show me the new skills section on the Knowledge Hub',
+   output:'The app is started, the relevant screen is navigated to, and a description of what is visible is returned.',
+   usecase:'Seeing a UI change in the actual running app before deciding it is ready to ship.'},
+  {id:'review',cat:'QA',ic:'&#128196;',name:'review',
+   what:'Reviews a pull request: reads the diff, checks the PR description, evaluates changes for correctness, and summarizes findings.',
+   call:'/review',
+   prompt:'/review',
+   output:'A PR review with a summary of changes, confirmed correctness, flagged risks, and a pass or request-for-changes verdict.',
+   usecase:'Getting a second opinion on a PR before merging, especially for changes to shared infrastructure or client-facing tools.'},
+  {id:'init',cat:'Setup',ic:'&#127959;',name:'init',
+   what:'Initializes a new CLAUDE.md file with codebase documentation. Reads the project structure and generates a reference file that future sessions can use for context.',
+   call:'/init',
+   prompt:'/init',
+   output:'A CLAUDE.md file in the project root documenting the tech stack, key files, conventions, and how to run the project.',
+   usecase:'Setting up a new project so every future MAVIS session starts with full context without re-explaining the codebase.'},
+];
+const SKILLS_CAT_COLOR={Research:'#06b6d4',Content:'#8b5cf6',Development:'#10b981','Lead Gen':'#f59e0b',Automation:'#3b82f6',QA:'#ef4444',Setup:'#6b7280'};
 function viewSim(){
-  return `<div class="simNote">
-      <div class="simNoteIc">&#9654;</div>
-      <div class="simNoteH">Try the MAVIS experience</div>
-      <p class="simNoteP">The interactive MAVIS experience lives on our live platform. Click below to open it in a new tab and explore it hands-on.</p>
-      <button class="runbtn hero" id="simOpen">&#8599;&nbsp; Open MAVIS &mdash; Explore</button>
-      <div class="simNoteUrl" id="simUrl"></div>
+  const cats=[
+    {id:'Research',ic:'&#128269;',label:'Research &amp; Information'},
+    {id:'Content',ic:'&#10022;',label:'Content &amp; Media'},
+    {id:'Development',ic:'&#128187;',label:'Development &amp; Code'},
+    {id:'Lead Gen',ic:'&#128202;',label:'Browser &amp; Lead Gen'},
+    {id:'Automation',ic:'&#9881;',label:'Automation &amp; Config'},
+    {id:'QA',ic:'&#9989;',label:'QA &amp; Verification'},
+    {id:'Setup',ic:'&#127959;',label:'Setup'},
+  ];
+  function skillCard(sk){
+    const col=SKILLS_CAT_COLOR[sk.cat]||'#06b6d4';
+    return `<div class="prosCard skillCard" data-skill="${esc(sk.id)}" style="cursor:pointer">
+      <div class="prosHead">
+        <div class="prosIc" style="background:${col}20;color:${col};border:1px solid ${col}40;font-size:16px">${sk.ic}</div>
+        <div><div class="prosName">${esc(sk.name)}</div><span class="ecoSkill" style="font-size:9px;letter-spacing:.3px">${esc(sk.cat)}</span></div>
+      </div>
+      <div class="prosDesc">${esc(sk.what)}</div>
+      <div class="prosK">Sample prompt</div>
+      <div class="prosEg">${esc(sk.prompt)}</div>
+      <button class="wizghost" style="margin-top:10px;align-self:flex-start">View details &rarr;</button>
     </div>`;
+  }
+  const sections=cats.map(c=>{
+    const items=MAVIS_SKILLS.filter(s=>s.cat===c.id);
+    if(!items.length) return '';
+    return `<div class="ecoSubh">${c.ic}&nbsp; ${c.label}</div><div class="prosGrid">${items.map(skillCard).join('')}</div>`;
+  }).join('');
+  return `<section class="card">
+    ${sectionHero('&#9889;','MAVIS Skills','Every built-in skill available in this workspace. Click any card for the full description, how to call it, a sample prompt, and a real use case.',[[String(MAVIS_SKILLS.length),'Skills'],[String(cats.length),'Categories']])}
+    ${sections}
+  </section>`;
 }
 function wireSim(){
   if(simTimer){clearInterval(simTimer);simTimer=null;}
-  const u=$('#simUrl'); if(u) u.textContent=EXPLORE_URL;
-  const b=$('#simOpen'); if(b) b.onclick=()=>openExternal(EXPLORE_URL);
+  document.querySelectorAll('#view .skillCard').forEach(c=>c.onclick=()=>{
+    const sk=MAVIS_SKILLS.find(s=>s.id===c.dataset.skill); if(!sk) return;
+    const col=SKILLS_CAT_COLOR[sk.cat]||'#06b6d4';
+    openDrawer(`<div class="dhead"><span class="dclose" data-close>&times;</span><h3>${esc(sk.name)}</h3><div class="meta"><span class="chip" style="color:${col};border-color:${col}40;background:${col}14">${esc(sk.cat)}</span></div></div>
+    <div class="dbody">
+      <div class="field"><div class="k">What it does</div><div class="v">${esc(sk.what)}</div></div>
+      <div class="field"><div class="k">How to call it</div><div class="v"><code style="background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.25);border-radius:8px;padding:8px 12px;display:block;font-size:12.5px;color:var(--acc);font-family:ui-monospace,Menlo,monospace">${esc(sk.call)}</code></div></div>
+      <div class="field"><div class="k">Sample prompt</div><div class="promptbox"><span class="qlabel">Say to MAVIS</span>${esc(sk.prompt)}</div></div>
+      <div class="field"><div class="k">Sample output</div><div class="v" style="background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.22);border-radius:10px;padding:11px 13px">${esc(sk.output)}</div></div>
+      <div class="field"><div class="k">Practical use case</div><div class="v">${esc(sk.usecase)}</div></div>
+    </div>`);
+  });
 }
 function wsRenderMain(){
   const main=$('#wsMain'); if(!main) return;
