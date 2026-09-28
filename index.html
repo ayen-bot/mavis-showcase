@@ -2345,6 +2345,7 @@ function cragInjectCss(){
   .cragTable tbody tr:hover{background:var(--surface2)}
   .cragCliName{font-weight:700;color:var(--ink)}
   .cragCliCsa{color:var(--muted)}
+  .cragLastUpd{color:var(--muted);font-size:12.5px;white-space:nowrap}
   .cragNotes{color:var(--ink2,var(--ink));font-size:12.5px;max-width:280px;line-height:1.4}
   .cragNoteSeg{display:block;margin-bottom:2px}
   .cragNoteSeg b{font-weight:700}
@@ -2506,12 +2507,13 @@ function cragRenderTable(){
       +'<td>'+cragCatBadge(cur?cur.tq:'')+'</td>'
       +'<td>'+cragCatBadge(cur?cur.cm:'')+'</td>'
       +'<td>'+cragOvrBadge(cragOverallState(c))+'</td>'
+      +'<td class="cragLastUpd">'+cragFmtDate(cur?cur.date:'')+'</td>'
       +'<td>'+cragNotesCell(c)+'</td>'
       +'<td><div class="cragRowActs"><button class="cragMini p" data-upd="'+esc(c.id)+'">Update</button><button class="cragMini" data-hist="'+esc(c.id)+'">History</button><button class="cragMini" data-wk="'+esc(c.id)+'">Weekly</button></div></td>'
       +'</tr>';
   }).join('');
   wrap.innerHTML='<div class="cragTWrap"><table class="cragTable"><thead><tr>'
-    +'<th>Client Name</th><th>Assigned CSA</th><th>Task Completion</th><th>Task Quality</th><th>Responsiveness &amp; Comms</th><th>Overall Client Status</th><th>CSA Notes</th><th></th>'
+    +'<th>Client Name</th><th>Assigned CSA</th><th>Task Completion</th><th>Task Quality</th><th>Responsiveness &amp; Comms</th><th>Overall Client Status</th><th>Last Updated</th><th>CSA Notes</th><th></th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
   wrap.querySelectorAll('[data-upd]').forEach(function(b){ b.onclick=function(){ cragOpenForm(b.getAttribute('data-upd')); }; });
   wrap.querySelectorAll('[data-hist]').forEach(function(b){ b.onclick=function(){ cragOpenHistory(b.getAttribute('data-hist')); }; });
