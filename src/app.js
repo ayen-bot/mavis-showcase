@@ -581,7 +581,7 @@ const CRAG_ROSTER=[
   ['The Firm - Miami','Harry Sadiwa'],['Cowley Associates, Inc.','Mark Denver Galaroza'],
   ['Dickens Consulting Group','Rose Ann Bocado'],['Khader Law','Nikka Kathleen Abatayo'],
   ['Tactical & Rescue Gear, Ltd.','Matthew Conopio'],['Avery Prep Tutoring','Mark Denver Galaroza'],
-  ['Trends LLC','Ngozi Kerry'],['Indian Mill Plank','Jerickson Fugaban'],['Polite Properties','Harry Sadiwa']
+  ['Trends LLC','Ngozi Kerry'],['Indian Mill Plank','Jerickson Fugaban'],['Polite Properties','Harry Sadiwa'],['SYMCO Recycling Solutions Ltd','Nikka Kathleen Abatayo']
 ];
 // three assessed categories: key, full label (form), short label (table header), note field
 const CRAG_CATS=[
