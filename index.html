@@ -5350,6 +5350,36 @@ function pdnPanel(){
     <div id="pdnOut"></div></div>`;
 }
 function viewPdCheck(){ return `<section class="card"><h2 class="sec">Native or Custom Check</h2><p class="lead">Check whether a client tool connects natively through Pipedream or needs a custom integration, and get the steps to follow.</p>${pdnPanel()}</section>`; }
+const PDN_QUESTIONS=['What does the client use this tool for today, and who uses it?','What do they want MAVIS to do with it (read data, create records, send alerts, sync to another tool)?','Does the vendor offer a public API? On which plan, and is there a cost?','How does sign-in work: OAuth, scoped API key, or password only?','Does it send webhooks, or will we poll for changes?','Is there a sandbox or test account we can use?','Is there a partner or approval process, and how long does it take?','Who is the client\'s technical contact for this tool?','Does it hold sensitive data (health, legal, financial)?'];
+function pdnCopyBox(title,text){ return `<div class="csa-h ok" style="margin-top:12px">${esc(title)}</div><textarea readonly class="ecoSearch" style="width:100%;min-height:150px;font-family:inherit">${esc(text)}</textarea><div class="wizrow" style="margin-top:6px"><button class="wizghost" data-pdncopy>Copy</button></div>`; }
+function pdnCustom(out,name,ft){
+  const nm=esc(name), row=(k,v)=>`<div class="trow"><div class="tk">${k}</div><div class="tv">${v}</div></div>`;
+  const inp=(id,ph)=>`<input id="pdnF_${id}" class="ecoSearch" style="width:100%;margin:0" placeholder="${ph}" autocomplete="off">`;
+  const sel=id=>`<select id="pdnF_${id}" class="ecoSearch" style="margin:0"><option>Unknown</option><option>Yes</option><option>No</option></select>`;
+  const li=a=>a.map(x=>`<li>${esc(x)}</li>`).join('');
+  out.innerHTML=`<div class="callout" style="padding:10px 12px;border-left:3px solid #f5a524;margin-bottom:10px"><b>Not native in Pipedream. Custom integration required.</b> A discovery checklist was created automatically. Nothing is assumed until verified.</div>
+    <div class="csa-h ok">Custom integration discovery checklist</div>
+    <div class="intgReq">${row('Tool purpose',inp('purpose','What the client uses it for'))}${row('Current workflow',inp('current','How they use it today'))}${row('Desired MAVIS workflow',inp('desired','What MAVIS should do with it'))}${row('API availability',sel('api'))}${row('Webhook capability',sel('hook'))}
+      ${row('Integration method','No native Pipedream app found in the catalog. Plan a custom integration via Pipedream Connect (HTTP or OAuth) and confirm the vendor&rsquo;s API and webhook support.')}${row('Available triggers','To confirm')}${row('Available actions','To confirm')}${row('Data that needs to move',inp('data','Which records or fields'))}${row('Technical contact',inp('contact','Client contact for this tool'))}${row('Test / sandbox available','To confirm with vendor')}${row('Known limitations','No native connector in the Pipedream catalog. Confirm API availability and rate limits with the vendor.')}</div>
+    <div class="wizrow" style="margin:10px 0"><button class="wizghost" data-pdnx="q">CSA questions &amp; requests</button><button class="wizghost" data-pdnx="req">Generate client request</button><button class="wizghost" data-pdnx="hand">Build handoff</button></div>
+    <div class="callout" style="padding:10px 12px;border-left:3px solid #155EEF;margin:8px 0"><div class="csa-h ok" style="margin:0 0 6px">What MAVIS needs to use ${nm}</div>
+      <div class="intgReq">${row('&#9989; What is connected','<ul><li>Nothing. No native Pipedream app and no existing custom build.</li></ul>')}${row('&#9940; What is missing','<ul>'+li(['A custom integration built via Pipedream Connect.','Confirmed vendor API access and webhook support.'])+'</ul>')}${row('&#128268; What MAVIS needs','<ul>'+li(['Developer setup: a custom OAuth app or HTTP component in Pipedream Connect.','Client-authorized vendor API access (the client\'s own account, no secrets shared).','Client authorization for MAVIS to connect.'])+'</ul>')}${row('&#128100; Who provides it','MAVIS dev builds. Client authorizes their own API access. Vendor may need partner approval.')}${row('&#10145;&#65039; Recommended next step','Confirm vendor API access, then build the custom Pipedream Connect integration and test.')}</div></div>
+    <div class="ccount">Pipedream check: Low. Not found in the live Pipedream catalog (${PDN.count.toLocaleString()} apps). Treat as a custom integration.</div>
+    <div class="wizrow" style="margin-top:8px"><a class="wizghost" href="https://pipedream.com/apps?q=${encodeURIComponent(name)}" target="_blank" rel="noopener noreferrer">Verify live on Pipedream &#8599;</a><button class="wizghost" data-pdnx="re">&#8635; Re-check</button><button class="runbtn" data-pdnx="how">&#128203; How To</button></div>
+    <div id="pdnExtra"></div>${ft}`;
+  const g=id=>{ const e=out.querySelector('#pdnF_'+id); return e&&e.value.trim()?e.value.trim():'To confirm'; };
+  const extra=out.querySelector('#pdnExtra');
+  const wire=()=>extra.querySelectorAll('[data-pdncopy]').forEach(b=>b.onclick=()=>{ const t=b.parentNode.previousElementSibling.value; (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{ const ta=b.parentNode.previousElementSibling; ta.select(); document.execCommand('copy'); }); b.textContent='Copied'; });
+  out.querySelectorAll('[data-pdnx]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.pdnx;
+    if(k==='re'){ pdnShow(out.parentNode.querySelector('#pdnOut')||out,name); return; }
+    if(k==='q') extra.innerHTML=`<div class="csa-h ok" style="margin-top:12px">CSA questions to ask</div><ol>${li(PDN_QUESTIONS)}</ol>`;
+    if(k==='how') extra.innerHTML=`<div class="csa-h ok" style="margin-top:12px">How To: connect a custom integration</div><ol>${PDN_CUSTOM_STEPS.map(x=>`<li><b>${esc(x[0])}.</b> ${esc(x[1])}</li>`).join('')}</ol>`;
+    if(k==='req') extra.innerHTML=pdnCopyBox('Client request (copy and send)',`Hi, we are setting up ${name} with MAVIS. To connect it we need a few things from you:\n\n1. What you use ${name} for today and what you would like MAVIS to do with it.\n2. Whether your ${name} plan includes API access (or if we should check with the vendor).\n3. The name of the person who manages ${name} on your side.\n4. When we are ready to connect, you will approve access yourself through a secure sign-in link. Please do not send passwords or keys by email or chat.\n\nThank you!`);
+    if(k==='hand') extra.innerHTML=pdnCopyBox('Technical handoff (copy)',`CUSTOM INTEGRATION HANDOFF: ${name}\nStatus: Not native in Pipedream (checked against ${PDN.count} apps). Custom build required.\nTool purpose: ${g('purpose')}\nCurrent workflow: ${g('current')}\nDesired MAVIS workflow: ${g('desired')}\nAPI availability: ${g('api')}\nWebhook capability: ${g('hook')}\nData that needs to move: ${g('data')}\nTechnical contact: ${g('contact')}\nMethod: custom integration via Pipedream Connect (HTTP or OAuth)\nClient does: approves access themselves (OAuth or a scoped key entered directly in Pipedream Connect). No credentials collected.\nTech does: build and test the connector, then log as Custom Integrated.\nNext step: confirm vendor API access.`);
+    wire();
+  });
+}
 function pdnShow(out,name){
   if(!PDN.list){ out.innerHTML='<div class="csaResHint">Could not load the Pipedream app list. Reload and try again.</div>'; return; }
   const r=pdnResolve(name); if(r.kind==='empty'){ out.innerHTML=''; return; }
@@ -5363,9 +5393,7 @@ function pdnShow(out,name){
       <ul><li>If it is one of these, follow the <b>Native</b> steps for that app.</li><li>If not, follow the <b>Custom</b> steps below.</li></ul>
       <div class="csa-h ok">Custom steps (if not a match)</div><ol>${PDN_CUSTOM_STEPS.map(s=>`<li><b>${esc(s[0])}.</b> ${esc(s[1])}</li>`).join('')}</ol>${ft}`;
   } else {
-    out.innerHTML=`<div class="resBadge esc">&#9888; Custom</div><div class="wizh">${nm} is not in Pipedream&rsquo;s app list</div>
-      <p class="wizsub">It needs a custom integration. Work through this checklist:</p>
-      <ol>${PDN_CUSTOM_STEPS.map(s=>`<li><b>${esc(s[0])}.</b> ${esc(s[1])}</li>`).join('')}</ol>${ft}`;
+    pdnCustom(out,name.trim(),ft);
   }
 }
 function pdnWire(stage){
