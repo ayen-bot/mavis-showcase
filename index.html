@@ -1607,6 +1607,7 @@ const VIEWS = [
   ['mytickets','Ticket Log','🎫'],
   ['campaignrag','Campaign RAG','🚦'],
   ['apibanks','API Banks','⛃'],
+  ['pdcheck','Native or Custom Check','✓'],
 ];
 const state = { view:'live', scope:'all', activeId:null, autoReveal:false };
 const recent = [];
@@ -1616,7 +1617,7 @@ const PAGE_TITLES = {
   links:'Links Bank',
   live:'Live MAVIS Analysis', sim:'MAVIS Skills', deliverables:'What MAVIS Can Do',
   tools:'Tools', csa:'CSA', prospecting:'Prospecting & Lead Gen', va:'VA Toolkit',
-  csatech:'CSA Tech Manager', mytickets:'Ticket Log', campaignrag:'Campaign RAG Status', apibanks:'API Banks', catalog:'Integration Library',
+  csatech:'CSA Tech Manager', mytickets:'Ticket Log', campaignrag:'Campaign RAG Status', apibanks:'API Banks', pdcheck:'Native or Custom Check', catalog:'Integration Library',
   discover:'Search', overview:'Overview', workflows:'Workflows', opportunities:'Opportunities',
   impact:'Impact', roadmap:'Roadmap',
 };
@@ -3105,6 +3106,7 @@ function render(){
   else if(state.view==='mytickets'){ v.innerHTML=viewMyTickets(); wireMyTickets(); }
   else if(state.view==='campaignrag'){ v.innerHTML=viewCampaignRag(); wireCampaignRag(); }
   else if(state.view==='apibanks'){ v.innerHTML=viewApiBanks(); wireApiBanks(); }
+  else if(state.view==='pdcheck'){ v.innerHTML=viewPdCheck(); pdnWire(v); }
   else if(state.view==='links'){ v.innerHTML=viewLinks(); wireLinks(); }
   else if(state.view==='prospecting'){ v.innerHTML=viewProspecting(); wireProspecting(); }
   else if(state.view==='va'){ v.innerHTML=viewVA(); wireVA(); }
@@ -3112,7 +3114,7 @@ function render(){
   else if(state.view==='deliverables'){ v.innerHTML=viewDeliverables(); wireDeliverables(); }
   else if(state.view==='live'){ v.innerHTML=viewLive(); wireLive(); }
   else if(state.view==='discover'){ v.innerHTML=viewDiscover(discQ); wireDiscover(); }
-  const hideChrome=['deliverables','tools','catalog','csa','csatech','mytickets','campaignrag','apibanks','prospecting','va','sim','links'].includes(state.view);
+  const hideChrome=['deliverables','tools','catalog','csa','csatech','mytickets','campaignrag','apibanks','pdcheck','prospecting','va','sim','links'].includes(state.view);
   const tc=document.querySelector('.topcontrols'); if(tc) tc.classList.toggle('hide', hideChrome);
   const vbar=document.querySelector('#vertbar'), vres=document.querySelector('#vertResults'); if(vbar) vbar.classList.toggle('hide', hideChrome); if(vres) vres.classList.toggle('hide', hideChrome);
   // The MAVIS title header shows only on the Live Analysis view; the whole topbar hides on chrome-less views.
@@ -5292,6 +5294,84 @@ function intgSetupData(a){
     sdk:`REST API available; official SDKs commonly provided for JS &amp; Python. MAVIS can call the REST endpoints directly if no SDK.`,
     setup:`Admin access to create an app / generate a key; the required scopes for your use case; and a test or sandbox account to validate against.`
   };
+}
+/* ---- Native or Custom? check (Pipedream app catalog, same apps.json as the Client Directory dashboard) ---- */
+const PDN_URLS=['https://csa-groq-proxy.vercel.app/apps.json','apps.json'];
+let PDN={list:null,keys:null,clean:null,count:0,src:'',loading:null};
+const PDN_STRIP=/\b(v\d+|oauth\d?|rest|api|accounting|payroll|sandbox|bot|beta|new|dev|developer|app|io)\b/g;
+const pdnKey=s=>(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const pdnClean=n=>n.replace(PDN_STRIP,' ').replace(/\s+/g,' ').trim();
+function pdnLoad(){
+  if(PDN.list) return Promise.resolve(true);
+  if(PDN.loading) return PDN.loading;
+  PDN.loading=(async()=>{
+    for(const u of PDN_URLS){
+      try{ const r=await fetch(u,{cache:'no-cache'}); if(!r.ok) continue; const j=await r.json();
+        if(j&&j.slugs&&j.slugs.length){
+          PDN.keys=new Map(); PDN.clean=new Map(); PDN.list=[];
+          j.slugs.forEach(slug=>{ const n=pdnKey(slug); if(!n) return; PDN.list.push({slug,n}); if(!PDN.keys.has(n)) PDN.keys.set(n,slug); const c=pdnClean(n); if(c&&!PDN.clean.has(c)) PDN.clean.set(c,slug); });
+          PDN.count=j.count||j.slugs.length; PDN.src=j.generated_at||''; return true; } }catch(e){}
+    }
+    PDN.loading=null; return false;
+  })();
+  return PDN.loading;
+}
+const PDN_AMBIG={leap:{slug:'leap',note:'"Leap" can mean LEAP Legal Software (custom build) or Leap AI (native). Confirm which one the client uses.'},sage:{slug:'sage',note:'"Sage" covers several different products (accounting, payroll, HR). Confirm which one the client uses.'}};
+// returns {kind:'native'|'maybe'|'custom'|'empty', slug, alts[]}
+function pdnResolve(name){
+  const n=pdnKey(name); if(!n) return {kind:'empty'};
+  if(PDN_AMBIG[n]) return {kind:'maybe',slug:PDN_AMBIG[n].slug,alts:[PDN_AMBIG[n].slug],note:PDN_AMBIG[n].note};
+  if(PDN.keys.has(n)) return {kind:'native',slug:PDN.keys.get(n)};
+  const c=pdnClean(n); if(c&&PDN.clean.has(c)) return {kind:'native',slug:PDN.clean.get(c)};
+  const hits=[];
+  if(n.length>=4) PDN.list.forEach(({slug,n:k})=>{ if((' '+k+' ').includes(' '+n+' ')||(' '+n+' ').includes(' '+k+' ')) hits.push(slug); });
+  if(hits.length) return {kind:'maybe',slug:hits[0],alts:hits.slice(0,6)};
+  return {kind:'custom'};
+}
+const PDN_NATIVE_STEPS=[
+  'Open the client\'s Pipedream Connect page and pick the app (slug shown above).',
+  'The client signs in and approves access themselves (OAuth, or a scoped key they enter directly in Pipedream Connect). Nobody collects or pastes credentials.',
+  'Confirm the account shows as connected, then run one small read test (for example, list a few records).',
+  'Check the app has the action the client needs. If it does not, call the vendor API through the proxy using the same connected account.',
+  'Log it as Native Connected on the client record.'];
+const PDN_CUSTOM_STEPS=[
+  ['Confirm the name','Check the exact product and edition. Names like "Leap" or "Sage" can mean several different products.'],
+  ['Find the API','Search the vendor\'s developer docs. Does a public API exist, and on which plan?'],
+  ['Check how sign-in works','OAuth, API key, or username and password only? Note the scopes needed. If it is password only, flag it as a blocker.'],
+  ['Check for webhooks','Does it push events, or do we have to poll? This sets how fast automations can react.'],
+  ['Check for gates','Partner program, approval wait, paid add-on, or IP allow list? These decide the timeline.'],
+  ['Check for sensitive data','Health, legal, or financial data means extra care and a data-handling check before building.'],
+  ['Split the work','Client does: approve access (OAuth or a scoped key entered in Pipedream Connect). Tech does: build and test the connector. No credentials come through chat, email or Drive.'],
+  ['Test and log','Run one minimal read call, note any error code, then record it as Custom Needed and add it to the Tech Task Board.']];
+function pdnPanel(){
+  return `<div class="wizpanel" id="pdnPanel" style="margin-bottom:14px"><div class="wizh">Is it native in Pipedream?</div>
+    <p class="wizsub">Type the client&rsquo;s tool. I check it against Pipedream&rsquo;s full app list and tell you whether it&rsquo;s native or needs a custom build, plus the steps to follow.</p>
+    <div class="wizrow" style="margin:2px 0 10px"><input id="pdnQ" class="ecoSearch" style="flex:1" placeholder="Tool name - HubSpot, Smokeball, Nextech..." autocomplete="off"><button class="runbtn" id="pdnGo">Check</button></div>
+    <div id="pdnOut"></div></div>`;
+}
+function viewPdCheck(){ return `<section class="card"><h2 class="sec">Native or Custom Check</h2><p class="lead">Check whether a client tool connects natively through Pipedream or needs a custom integration, and get the steps to follow.</p>${pdnPanel()}</section>`; }
+function pdnShow(out,name){
+  if(!PDN.list){ out.innerHTML='<div class="csaResHint">Could not load the Pipedream app list. Reload and try again.</div>'; return; }
+  const r=pdnResolve(name); if(r.kind==='empty'){ out.innerHTML=''; return; }
+  const nm=esc(name.trim()), ft=`<div class="ccount">Checked against ${PDN.count.toLocaleString()} Pipedream apps${PDN.src?' (list dated '+esc(PDN.src)+')':''}.</div>`;
+  if(r.kind==='native'){
+    out.innerHTML=`<div class="resBadge ok">&#10003; Native</div><div class="wizh">${nm} is a native Pipedream app</div><p class="wizsub">Pipedream app: <b>${esc(r.slug)}</b>. No custom build needed to connect it.</p>
+      <div class="csa-h ok">Steps</div><ol>${PDN_NATIVE_STEPS.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>${ft}`;
+  } else if(r.kind==='maybe'){
+    out.innerHTML=`<div class="resBadge esc">&#9888; Confirm which app</div><div class="wizh">${nm} might match a Pipedream app</div>
+      <p class="wizsub">${r.note?esc(r.note)+' Closest Pipedream app: ':'No exact match, but similar names exist: '}<b>${r.alts.map(esc).join(', ')}</b>.${r.note?'':' Different products can share a name, so confirm with the client which one they use.'}</p>
+      <ul><li>If it is one of these, follow the <b>Native</b> steps for that app.</li><li>If not, follow the <b>Custom</b> steps below.</li></ul>
+      <div class="csa-h ok">Custom steps (if not a match)</div><ol>${PDN_CUSTOM_STEPS.map(s=>`<li><b>${esc(s[0])}.</b> ${esc(s[1])}</li>`).join('')}</ol>${ft}`;
+  } else {
+    out.innerHTML=`<div class="resBadge esc">&#9888; Custom</div><div class="wizh">${nm} is not in Pipedream&rsquo;s app list</div>
+      <p class="wizsub">It needs a custom integration. Work through this checklist:</p>
+      <ol>${PDN_CUSTOM_STEPS.map(s=>`<li><b>${esc(s[0])}.</b> ${esc(s[1])}</li>`).join('')}</ol>${ft}`;
+  }
+}
+function pdnWire(stage){
+  const q=stage.querySelector('#pdnQ'), go=stage.querySelector('#pdnGo'), out=stage.querySelector('#pdnOut'); if(!q) return;
+  const run=async()=>{ out.innerHTML='<div class="ccount">Checking...</div>'; await pdnLoad(); pdnShow(out,q.value); };
+  go.onclick=run; q.addEventListener('keydown',e=>{ if(e.key==='Enter') run(); }); pdnLoad();
 }
 function renderIntg(stage){
   const banks=DATA.apibanks||[];
