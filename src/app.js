@@ -577,7 +577,7 @@ const CRAG_ROSTER=[
   ['Structural Prime Builder INC','Anna Macaya'],['THE NYBB GROUP, LLC.','Anna Macaya'],
   ['ATS Group','Matthew Conopio'],['Majestic Property Management, Inc','Chris Uddin'],
   ['Souk Systems (MAVIS)','Chris Uddin'],['PayDiverse, LLC.','Ericka Meged'],
-  ['Western Optical Supply Inc','Jerickson Fugaban'],['The Little Lighthouse Foundation','Taye Kimberly'],
+  ['Western Optical Supply Inc','Jerickson Fugaban'],['The Little Lighthouse Foundation','Joshua Miguel Delos Santos'],
   ['Knowbility','Floricel Villanueva'],['Diamond Mind','Rose Ann Bocado'],
   ['The Firm - Miami','Harry Sadiwa'],['Cowley Associates, Inc.','Mark Denver Galaroza'],
   ['Dickens Consulting Group','Rose Ann Bocado'],['Khader Law','Nikka Kathleen Abatayo'],
