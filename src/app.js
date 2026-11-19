@@ -583,7 +583,7 @@ const CRAG_ROSTER=[
   ['Dickens Consulting Group','Rose Ann Bocado'],['Khader Law','Nikka Kathleen Abatayo'],
   ['Tactical & Rescue Gear, Ltd.','Matthew Conopio'],['Avery Prep Tutoring','Mark Denver Galaroza'],
   ['Trends LLC','Ngozi Kerry'],['Indian Mill Plank','Jerickson Fugaban'],['Polite Properties','Harry Sadiwa'],['SYMCO Recycling Solutions Ltd','Nikka Kathleen Abatayo'],
-  ['First and Bowl','Allan Galindo'],['Green Brains MD','Allan Galindo'],
+  ['First and Bowl','Allan Galindo'],['Green Brains MD','Mark Denver Galaroza'],
   ["Wayne's Tire Shop LLC",'Leslie Montealto'],['Sphynx Financial','Ngozi Kerry']
 ];
 // three assessed categories: key, full label (form), short label (table header), note field
